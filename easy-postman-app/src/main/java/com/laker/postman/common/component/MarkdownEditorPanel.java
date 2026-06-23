@@ -1,21 +1,14 @@
 package com.laker.postman.common.component;
 
-import com.formdev.flatlaf.util.SystemFileChooser;
-import com.laker.postman.common.constants.ModernColors;
-import com.laker.postman.service.render.HttpHtmlRenderer;
-import com.laker.postman.util.EditorThemeUtil;
-import com.laker.postman.util.FileChooserUtil;
-import com.laker.postman.util.FontsUtil;
-import com.laker.postman.util.I18nUtil;
-import com.laker.postman.util.MessageKeys;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-
-import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.undo.UndoManager;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -23,6 +16,43 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.InputMap;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
+import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.undo.UndoManager;
+
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+
+import com.formdev.flatlaf.util.SystemFileChooser;
+import com.laker.postman.common.constants.ModernColors;
+import com.laker.postman.util.EditorThemeUtil;
+import com.laker.postman.util.FileChooserUtil;
+import com.laker.postman.util.FontsUtil;
+import com.laker.postman.util.I18nUtil;
+import com.laker.postman.util.MessageKeys;
 
 /**
  * Markdown 编辑器组件
@@ -39,6 +69,17 @@ public class MarkdownEditorPanel extends JPanel {
 
     private JPanel editorPanelRef;
     private JPanel previewPanelRef;
+    
+    private JScrollPane editorScrollPane;
+    private JScrollPane previewScrollPane;
+    private boolean isSyncingScroll = false;  // 防止滚动循环的标志
+
+    // 防抖相关
+    private static final int PREVIEW_DEBOUNCE_DELAY = 300;  // 预览更新防抖延迟（毫秒）
+    private static final int STATUS_BAR_DEBOUNCE_DELAY = 100;  // 状态栏更新防抖延迟（毫秒）
+    private Timer previewDebounceTimer;  // 预览防抖定时器
+    private Timer statusBarDebounceTimer;  // 状态栏防抖定时器
+    private final AtomicBoolean isPreviewUpdating = new AtomicBoolean(false);  // 防止并发更新
 
     private static final int MODE_SPLIT = 0;
     private static final int MODE_EDIT_ONLY = 1;
@@ -87,72 +128,6 @@ public class MarkdownEditorPanel extends JPanel {
     }
 
 
-    /**
-     * 将 Color 转换为十六进制字符串
-     */
-    private String toHex(Color color) {
-        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
-    }
-
-    private String getTableStyle() {
-        return "border-collapse:collapse;width:100%;margin:0 0 8px 0;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";";
-    }
-
-    private String getTableCellStyle() {
-        return "padding:4px 8px;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";";
-    }
-
-    private String getTableHeaderStyle() {
-        String bgColor = toHex(ModernColors.getHoverBackgroundColor());
-        return getTableCellStyle() + "font-weight:600;background-color:" + bgColor + ";";
-    }
-
-    private String getCodeBlockStyle() {
-        return "background-color:" + toHex(ModernColors.getConsoleTextAreaBg()) +
-                ";padding:8px;overflow:auto;font-size:10px;line-height:1.5;border-radius:4px;" +
-                "margin:0 0 8px 0;font-family:monospace;color:" +
-                toHex(ModernColors.getConsoleText()) +
-                ";display:block;white-space:pre;word-wrap:normal;";
-    }
-
-    private String getInlineCodeStyle() {
-        String bgColor = toHex(ModernColors.getHoverBackgroundColor());
-        String textColor = toHex(ModernColors.getErrorDark());
-        return "background-color:" + bgColor + ";color:" + textColor +
-                ";padding:1px 4px;margin:0 1px;font-size:10px;border-radius:3px;font-family:monospace;";
-    }
-
-    private String getHeadingStyle(int level) {
-        String dividerColor = toHex(ModernColors.getDividerBorderColor());
-        return switch (level) {
-            case 1 ->
-                    "font-size:18px;font-weight:600;margin:4px 0 4px 0;border-bottom:2px solid " + dividerColor + ";padding-bottom:0.2em;";
-            case 2 ->
-                    "font-size:16px;font-weight:600;margin:4px 0 3px 0;border-bottom:1px solid " + dividerColor + ";padding-bottom:0.2em;";
-            case 3 -> "font-size:14px;font-weight:600;margin:4px 0 3px 0;";
-            case 4 -> "font-size:12px;font-weight:600;margin:4px 0 3px 0;";
-            case 5 -> "font-size:11px;font-weight:600;margin:4px 0 3px 0;";
-            case 6 ->
-                    "font-size:10px;font-weight:600;margin:4px 0 3px 0;color:" + toHex(ModernColors.getTextHint()) + ";";
-            default -> "";
-        };
-    }
-
-    private String getBlockquoteStyle() {
-        Color accentColor = ModernColors.getAccent();
-        String borderColor = toHex(accentColor);
-        String bgColor = String.format(java.util.Locale.ROOT, "rgba(%d,%d,%d,0.08)",
-                accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue());
-        return "padding:6px 10px;color:" + toHex(ModernColors.getTextSecondary()) +
-                ";border-left:3px solid " + borderColor + ";background-color:" + bgColor +
-                ";margin:0 0 8px 0;border-radius:0 3px 3px 0;";
-    }
-
-    private String getHrStyle() {
-        return "height:2px;margin:24px 0;background-color:" + toHex(ModernColors.getDividerBorderColor()) + ";border:0;";
-    }
-
-
     private void initUI() {
         setLayout(new BorderLayout());
         ToolWindowSurfaceStyle.applyCard(this);
@@ -171,7 +146,10 @@ public class MarkdownEditorPanel extends JPanel {
         JPanel statusBar = createStatusBar();
         add(statusBar, BorderLayout.SOUTH);
 
-        SwingUtilities.invokeLater(() -> splitPane.setDividerLocation(0.5));
+        SwingUtilities.invokeLater(() -> {
+            splitPane.setDividerLocation(0.5);
+            setupScrollSync();
+        });
     }
 
     /**
@@ -180,6 +158,12 @@ public class MarkdownEditorPanel extends JPanel {
     private JPanel createEnhancedToolbar() {
         JPanel toolbarContainer = new JPanel(new WrapLayout(FlowLayout.LEFT, 5, 2));
         ToolWindowSurfaceStyle.applySectionHeader(toolbarContainer, 3, 5, 3, 5);
+        
+        // 添加边框突出显示工具栏
+        toolbarContainer.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, ModernColors.getBorderLightColor()),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)
+        ));
 
         undoButton = createFlatButton("↶", I18nUtil.getMessage(MessageKeys.MARKDOWN_UNDO), e -> undo());
         redoButton = createFlatButton("↷", I18nUtil.getMessage(MessageKeys.MARKDOWN_REDO), e -> redo());
@@ -419,30 +403,46 @@ public class MarkdownEditorPanel extends JPanel {
         // 使用 SearchableTextArea 包装器（启用搜索替换功能）
         searchableTextArea = new SearchableTextArea(editorArea, true);
 
-        // 添加撤销/重做支持
+        // 添加撤销/重做支持，限制撤销步数防止内存占用过大
+        undoManager.setLimit(100);  // 最多保留100步撤销历史
         editorArea.getDocument().addUndoableEditListener(e -> {
             undoManager.addEdit(e.getEdit());
             updateUndoRedoButtons();
         });
 
-        // 监听内容变化，更新预览
+        // 初始化预览防抖定时器
+        previewDebounceTimer = new Timer(PREVIEW_DEBOUNCE_DELAY, e -> {
+            if (isPreviewUpdating.compareAndSet(false, true)) {
+                try {
+                    updatePreview();
+                } finally {
+                    isPreviewUpdating.set(false);
+                }
+            }
+        });
+        previewDebounceTimer.setRepeats(false);
+
+        // 监听内容变化，使用防抖机制更新预览
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                updatePreview();
                 notifyChangeListeners(e);
+                // 防抖：重置定时器，延迟更新预览
+                previewDebounceTimer.restart();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                updatePreview();
                 notifyChangeListeners(e);
+                // 防抖：重置定时器，延迟更新预览
+                previewDebounceTimer.restart();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                updatePreview();
                 notifyChangeListeners(e);
+                // 防抖：重置定时器，延迟更新预览
+                previewDebounceTimer.restart();
             }
         });
 
@@ -462,10 +462,10 @@ public class MarkdownEditorPanel extends JPanel {
         previewPane.setEditable(false);
         previewPane.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
         ToolWindowSurfaceStyle.applyTextComponentCard(previewPane);
-        JScrollPane scrollPane = new JScrollPane(previewPane);
-        ToolWindowSurfaceStyle.applyScrollPaneCard(scrollPane);
+        previewScrollPane = new JScrollPane(previewPane);
+        ToolWindowSurfaceStyle.applyScrollPaneCard(previewScrollPane);
 
-        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(previewScrollPane, BorderLayout.CENTER);
         return panel;
     }
 
@@ -498,35 +498,46 @@ public class MarkdownEditorPanel extends JPanel {
         statusBar.add(new JSeparator(SwingConstants.VERTICAL));
         statusBar.add(positionLabel);
 
-        // 更新状态栏
-        editorArea.addCaretListener(e -> {
-            try {
-                int pos = editorArea.getCaretPosition();
-                int line = editorArea.getLineOfOffset(pos);
-                int col = pos - editorArea.getLineStartOffset(line);
-                positionLabel.setText(String.format("%s: %d, %s: %d",
-                        I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_LINE), line + 1,
-                        I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_COLUMN), col + 1));
+        // 初始化状态栏防抖定时器
+        statusBarDebounceTimer = new Timer(STATUS_BAR_DEBOUNCE_DELAY, e -> updateStatusBar(positionLabel, wordCountLabel));
+        statusBarDebounceTimer.setRepeats(false);
 
-                String text = editorArea.getText();
-                // 计算单词数：空文本或只有空白字符时为0
-                int wordCount = 0;
-                int charCount = 0;
-                if (text != null) {
-                    charCount = text.length();
-                    if (!text.trim().isEmpty()) {
-                        wordCount = text.trim().split("\\s+").length;
-                    }
-                }
-                wordCountLabel.setText(String.format("%s: %d | %s: %d",
-                        I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_WORDS), wordCount,
-                        I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_CHARS), charCount));
-            } catch (Exception ex) {
-                // Ignore
-            }
+        // 使用防抖机制更新状态栏
+        editorArea.addCaretListener(e -> {
+            statusBarDebounceTimer.restart();
         });
 
         return statusBar;
+    }
+
+    /**
+     * 更新状态栏信息（防抖后执行）
+     */
+    private void updateStatusBar(JLabel positionLabel, JLabel wordCountLabel) {
+        try {
+            int pos = editorArea.getCaretPosition();
+            int line = editorArea.getLineOfOffset(pos);
+            int col = pos - editorArea.getLineStartOffset(line);
+            positionLabel.setText(String.format("%s: %d, %s: %d",
+                    I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_LINE), line + 1,
+                    I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_COLUMN), col + 1));
+
+            String text = editorArea.getText();
+            // 计算单词数：空文本或只有空白字符时为0
+            int wordCount = 0;
+            int charCount = 0;
+            if (text != null) {
+                charCount = text.length();
+                if (!text.trim().isEmpty()) {
+                    wordCount = text.trim().split("\\s+").length;
+                }
+            }
+            wordCountLabel.setText(String.format("%s: %d | %s: %d",
+                    I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_WORDS), wordCount,
+                    I18nUtil.getMessage(MessageKeys.MARKDOWN_STATUS_CHARS), charCount));
+        } catch (Exception ex) {
+            // 忽略异常，避免影响用户体验
+        }
     }
 
 
@@ -878,11 +889,23 @@ public class MarkdownEditorPanel extends JPanel {
      * 更新预览
      */
     private void updatePreview() {
+//        String markdown = editorArea.getText();
+//        String html = convertMarkdownToHtml(markdown);
+//        previewPane.setText(html);
+
+//        previewPane.setCaretPosition(0);
+    	
         String markdown = editorArea.getText();
-        String html = convertMarkdownToHtml(markdown);
-        previewPane.setText(html);
+
+        // ✅ 使用 Flexmark 渲染
+        String fullHtml = convertMarkdownToHtml(markdown);
+
+        previewPane.setContentType("text/html");
+        previewPane.setText(fullHtml);
         previewPane.setCaretPosition(0);
     }
+    
+
 
 
     /**
@@ -893,321 +916,8 @@ public class MarkdownEditorPanel extends JPanel {
         if (markdown == null || markdown.isEmpty()) {
             return "<html><body style='margin:0;padding:12px;font-size:10px;'></body></html>";
         }
-
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html><html><head>");
-        html.append("<meta charset='UTF-8'>");
-        html.append("</head>");
-
-        // 在 body 上使用 inline style 设置基本样式（不使用 StyleSheet）
-        html.append("<body style='");
-        html.append("margin:0;padding:8px;"); // 设置内边距，更紧凑
-        html.append("font-family:sans-serif;");
-        html.append("font-size:10px;");
-        html.append("line-height:1.6;");
-        html.append("color:").append(toHex(ModernColors.getTextPrimary())).append(";");
-        html.append("background:").append(toHex(ModernColors.getCardBackgroundColor())).append(";");
-        html.append("'>");
-
-        String[] lines = markdown.split("\n");
-        boolean inCodeBlock = false;
-        boolean inList = false;
-        boolean inOrderedList = false;
-        boolean inTable = false;
-        String codeLanguage = "";
-
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-
-            // 代码块
-            if (line.trim().startsWith("```")) {
-                if (inCodeBlock) {
-                    html.append("</pre>");
-                    inCodeBlock = false;
-                    codeLanguage = "";
-                } else {
-                    // 提取语言标识
-                    codeLanguage = line.trim().substring(3).trim();
-                    html.append("<pre style='").append(getCodeBlockStyle()).append("'");
-                    if (!codeLanguage.isEmpty()) {
-                        html.append(" class='language-").append(escapeHtml(codeLanguage)).append("'");
-                    }
-                    html.append(">");
-                    inCodeBlock = true;
-                }
-                continue;
-            }
-
-            if (inCodeBlock) {
-                // 去除行尾空白字符，避免渲染为方框
-                String codeLine = line.replaceAll("\\s+$", "");
-                html.append(escapeHtml(codeLine)).append("\n");
-                continue;
-            }
-
-            // 表格处理
-            if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
-                if (!inTable) {
-                    html.append("<table style='").append(getTableStyle()).append("'>");
-                    inTable = true;
-                }
-
-                // 检查是否是分隔行
-                if (line.matches("^\\|[\\s\\-:|]+\\|$")) {
-                    // 跳过分隔行
-                    continue;
-                }
-
-                // 判断是否是表头（下一行是分隔行）
-                boolean isHeader = false;
-                if (i + 1 < lines.length && lines[i + 1].matches("^\\|[\\s\\-:|]+\\|$")) {
-                    isHeader = true;
-                    html.append("<thead><tr>");
-                } else if (inTable && html.toString().contains("<thead>")) {
-                    if (!html.toString().contains("<tbody>")) {
-                        html.append("<tbody>");
-                    }
-                    html.append("<tr>");
-                } else {
-                    html.append("<tr>");
-                }
-
-                String[] cells = line.split("\\|", -1); // -1 保留尾部空字符串
-                // 去除首尾的空元素（| 开头和结尾导致的）
-                int start = cells[0].trim().isEmpty() ? 1 : 0;
-                int end = cells[cells.length - 1].trim().isEmpty() ? cells.length - 1 : cells.length;
-
-                for (int j = start; j < end; j++) {
-                    String cell = cells[j].trim();
-                    if (isHeader) {
-                        html.append("<th style='").append(getTableHeaderStyle()).append("'>").append(processInlineMarkdown(cell)).append("</th>");
-                    } else {
-                        html.append("<td style='").append(getTableCellStyle()).append("'>").append(processInlineMarkdown(cell)).append("</td>");
-                    }
-                }
-
-                html.append("</tr>");
-                if (isHeader) {
-                    html.append("</thead>");
-                }
-                continue;
-            } else if (inTable) {
-                if (html.toString().contains("<tbody>")) {
-                    html.append("</tbody>");
-                }
-                html.append("</table>");
-                inTable = false;
-            }
-
-            // 标题
-            if (line.startsWith("# ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h1 style='").append(getHeadingStyle(1)).append("'>").append(processInlineMarkdown(line.substring(2))).append("</h1>");
-            } else if (line.startsWith("## ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h2 style='").append(getHeadingStyle(2)).append("'>").append(processInlineMarkdown(line.substring(3))).append("</h2>");
-            } else if (line.startsWith("### ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h3 style='").append(getHeadingStyle(3)).append("'>").append(processInlineMarkdown(line.substring(4))).append("</h3>");
-            } else if (line.startsWith("#### ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h4 style='").append(getHeadingStyle(4)).append("'>").append(processInlineMarkdown(line.substring(5))).append("</h4>");
-            } else if (line.startsWith("##### ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h5 style='").append(getHeadingStyle(5)).append("'>").append(processInlineMarkdown(line.substring(6))).append("</h5>");
-            } else if (line.startsWith("###### ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<h6 style='").append(getHeadingStyle(6)).append("'>").append(processInlineMarkdown(line.substring(7))).append("</h6>");
-            }
-            // 水平线
-            else if (line.trim().equals("---") || line.trim().equals("***") || line.trim().equals("___")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<hr style='").append(getHrStyle()).append("'>");
-            }
-            // 任务列表 - 使用表格布局确保对齐，优化样式
-            else if (line.trim().matches("^[-*]\\s+\\[[ xX]\\]\\s+.*")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-
-                boolean checked = line.toLowerCase().contains("[x]");
-                String content = line.trim().replaceFirst("^[-*]\\s+\\[[ xX]\\]\\s+", "");
-
-                // 使用内联样式彻底覆盖表格样式，移除所有边框
-                html.append("<table class='task-item' cellpadding='0' cellspacing='0' border='0' style='border: 0; border-collapse: separate; margin: 0; padding: 0; margin-bottom: 0.25em; width: 100%; background: transparent;'>");
-                html.append("<tr style='border: 0; border-top: 0; background: transparent;'>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; width: 18px; padding-right: 6px; background: transparent; vertical-align: middle;'>");
-                html.append("<input type='checkbox' disabled");
-                if (checked) html.append(" checked");
-                html.append(">");
-                html.append("</td>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; background: transparent; vertical-align: middle;'>");
-                html.append(processInlineMarkdown(content));
-                html.append("</td>");
-                html.append("</tr>");
-                html.append("</table>");
-            }
-            // 无序列表 - 使用表格布局实现完全左对齐
-            else if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-
-                String content = line.substring(line.indexOf(" ") + 1);
-
-                // 使用表格布局，与任务列表保持一致的左对齐
-                html.append("<table class='list-item' cellpadding='0' cellspacing='0' border='0' style='border: 0; border-collapse: separate; margin: 0; padding: 0; margin-bottom: 0.25em; width: 100%; background: transparent;'>");
-                html.append("<tr style='border: 0; border-top: 0; background: transparent;'>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; width: 1%; padding-right: 6px; background: transparent; vertical-align: top; white-space: nowrap;'>");
-                html.append("•"); // Unicode bullet point
-                html.append("</td>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; background: transparent; vertical-align: top;'>");
-                html.append(processInlineMarkdown(content));
-                html.append("</td>");
-                html.append("</tr>");
-                html.append("</table>");
-            }
-            // 有序列表 - 使用表格布局实现完全左对齐
-            else if (line.trim().matches("^\\d+\\.\\s.*")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-
-                // 提取序号和内容
-                String trimmed = line.trim();
-                int dotIndex = trimmed.indexOf('.');
-                String number = trimmed.substring(0, dotIndex + 1); // 包括点号
-                String content = trimmed.substring(dotIndex + 1).trim();
-
-                // 使用表格布局，与任务列表保持一致的左对齐
-                html.append("<table class='list-item' cellpadding='0' cellspacing='0' border='0' style='border: 0; border-collapse: separate; margin: 0; padding: 0; margin-bottom: 0.25em; width: 100%; background: transparent;'>");
-                html.append("<tr style='border: 0; border-top: 0; background: transparent;'>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; width: 1%; padding-right: 6px; background: transparent; vertical-align: top; text-align: left; white-space: nowrap;'>");
-                html.append(number);
-                html.append("</td>");
-                html.append("<td style='border: 0; padding: 0; margin: 0; background: transparent; vertical-align: top;'>");
-                html.append(processInlineMarkdown(content));
-                html.append("</td>");
-                html.append("</tr>");
-                html.append("</table>");
-            }
-            // 引用
-            else if (line.trim().startsWith("> ")) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                String content = line.substring(line.indexOf(">") + 1).trim();
-                html.append("<blockquote style='").append(getBlockquoteStyle()).append("'>").append(processInlineMarkdown(content)).append("</blockquote>");
-            }
-            // 空行
-            else if (line.trim().isEmpty()) {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<br>");
-            }
-            // 普通段落
-            else {
-                closeLists(html, inList, inOrderedList);
-                inList = false;
-                inOrderedList = false;
-                html.append("<p style='margin:0 0 6px 0;'>").append(processInlineMarkdown(line)).append("</p>");
-            }
-        }
-
-        // 关闭未闭合的标签
-        closeLists(html, inList, inOrderedList);
-        if (inTable) {
-            if (html.toString().contains("<tbody>")) {
-                html.append("</tbody>");
-            }
-            html.append("</table>");
-        }
-        if (inCodeBlock) {
-            html.append("</code></pre>");
-        }
-
-        html.append("</body></html>");
-        return html.toString();
-    }
-
-    /**
-     * 关闭列表标签
-     */
-    private void closeLists(StringBuilder html, boolean inList, boolean inOrderedList) {
-        if (inList) {
-            html.append("</ul>");
-        }
-        if (inOrderedList) {
-            html.append("</ol>");
-        }
-    }
-
-    /**
-     * 处理行内 Markdown 语法（GFM 增强版）
-     */
-    private String processInlineMarkdown(String text) {
-        if (text == null || text.isEmpty()) {
-            return "";
-        }
-
-        // 先转义 HTML，防止用户输入的 HTML 标签被执行
-        text = escapeHtml(text);
-
-        // 然后处理 Markdown 语法（此时可以安全地插入 HTML 标签）
-
-        // 粗斜体 ***text*** (必须在粗体和斜体之前处理)
-        text = text.replaceAll("\\*\\*\\*(.+?)\\*\\*\\*", "<strong><em>$1</em></strong>");
-        text = text.replaceAll("___(.+?)___", "<strong><em>$1</em></strong>");
-
-        // 粗体 **text** 或 __text__
-        text = text.replaceAll("\\*\\*(.+?)\\*\\*", "<strong>$1</strong>");
-        text = text.replaceAll("__(.+?)__", "<strong>$1</strong>");
-
-        // 斜体 *text* 或 _text_ (必须在粗体之后处理)
-        text = text.replaceAll("\\*(.+?)\\*", "<em>$1</em>");
-        text = text.replaceAll("(?<!_)_(.+?)_(?!_)", "<em>$1</em>");
-
-        // 删除线 ~~text~~ - 使用 strike 标签，Swing HTMLEditorKit 原生支持
-        text = text.replaceAll("~~(.+?)~~", "<strike>$1</strike>");
-
-        // 高亮 ==text== (部分编辑器支持)
-        text = text.replaceAll("==(.+?)==", "<mark>$1</mark>");
-
-        // 行内代码 `code` (必须在其他处理之后，避免代码中的特殊字符被处理)
-        text = text.replaceAll("`(.+?)`", "<code style='" + getInlineCodeStyle() + "'>$1</code>");
-
-        // 图片 ![alt](url)
-        text = text.replaceAll("!\\[([^\\]]*)\\]\\(([^)]+)\\)", "<img src=\"$2\" alt=\"$1\" style=\"max-width: 100%;\" />");
-
-        // 链接 [text](url)
-        text = text.replaceAll("\\[([^\\]]+)\\]\\(([^)]+)\\)", "<a href=\"$2\">$1</a>");
-
-        // 自动链接 <url>
-        text = text.replaceAll("&lt;(https?://[^&]+)&gt;", "<a href=\"$1\">$1</a>");
-
-        return text;
-    }
-
-    /**
-     * HTML 转义
-     */
-    private String escapeHtml(String text) {
-        return HttpHtmlRenderer.escapeHtml(text);
+        
+        return MarkdownPreviewRenderer.renderWrapWithTheme(markdown);
     }
 
     /**
@@ -1251,6 +961,32 @@ public class MarkdownEditorPanel extends JPanel {
     }
 
     /**
+     * 移除文档变化监听器（防止内存泄漏）
+     */
+    public void removeDocumentListener(DocumentListener listener) {
+        changeListeners.remove(listener);
+    }
+
+    /**
+     * 清理资源（组件销毁时调用）
+     */
+    public void dispose() {
+        // 停止防抖定时器
+        if (previewDebounceTimer != null) {
+            previewDebounceTimer.stop();
+        }
+        if (statusBarDebounceTimer != null) {
+            statusBarDebounceTimer.stop();
+        }
+        
+        // 清空监听器列表
+        changeListeners.clear();
+        
+        // 清空撤销历史
+        undoManager.discardAllEdits();
+    }
+
+    /**
      * 通知所有监听器
      */
     private void notifyChangeListeners(DocumentEvent e) {
@@ -1262,6 +998,106 @@ public class MarkdownEditorPanel extends JPanel {
             } else {
                 listener.changedUpdate(e);
             }
+        }
+    }
+
+    /**
+     * 设置编辑器和预览器的双向滚动联动
+     */
+    private void setupScrollSync() {
+        // 获取编辑器的滚动面板
+        editorScrollPane = findScrollPane(searchableTextArea);
+        
+        if (editorScrollPane != null && previewScrollPane != null) {
+            // 编辑器滚动 → 预览器同步滚动
+            editorScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
+                if (!isSyncingScroll && viewMode == MODE_SPLIT) {
+                    isSyncingScroll = true;
+                    try {
+                        syncScrollToPreview();
+                    } finally {
+                        isSyncingScroll = false;
+                    }
+                }
+            });
+
+            // 预览器滚动 → 编辑器同步滚动
+            previewScrollPane.getVerticalScrollBar().addAdjustmentListener(e -> {
+                if (!isSyncingScroll && viewMode == MODE_SPLIT) {
+                    isSyncingScroll = true;
+                    try {
+                        syncScrollToEditor();
+                    } finally {
+                        isSyncingScroll = false;
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * 查找组件中的滚动面板
+     */
+    private JScrollPane findScrollPane(Component component) {
+        if (component instanceof JScrollPane) {
+            return (JScrollPane) component;
+        }
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                JScrollPane result = findScrollPane(child);
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 编辑器滚动同步到预览器（比例同步）
+     */
+    private void syncScrollToPreview() {
+        try {
+            if (previewScrollPane == null) {
+                return;
+            }
+            
+            int editorMax = editorScrollPane.getVerticalScrollBar().getMaximum() - 
+                           editorScrollPane.getVerticalScrollBar().getVisibleAmount();
+            int previewMax = previewScrollPane.getVerticalScrollBar().getMaximum() - 
+                            previewScrollPane.getVerticalScrollBar().getVisibleAmount();
+            
+            if (editorMax > 0 && previewMax > 0) {
+                double ratio = (double) editorScrollPane.getVerticalScrollBar().getValue() / editorMax;
+                int targetValue = (int) (ratio * previewMax);
+                previewScrollPane.getVerticalScrollBar().setValue(targetValue);
+            }
+        } catch (Exception ex) {
+            // 忽略异常
+        }
+    }
+
+    /**
+     * 预览器滚动同步到编辑器（比例同步）
+     */
+    private void syncScrollToEditor() {
+        try {
+            if (editorScrollPane == null) {
+                return;
+            }
+            
+            int previewMax = previewScrollPane.getVerticalScrollBar().getMaximum() - 
+                            previewScrollPane.getVerticalScrollBar().getVisibleAmount();
+            int editorMax = editorScrollPane.getVerticalScrollBar().getMaximum() - 
+                           editorScrollPane.getVerticalScrollBar().getVisibleAmount();
+            
+            if (previewMax > 0 && editorMax > 0) {
+                double ratio = (double) previewScrollPane.getVerticalScrollBar().getValue() / previewMax;
+                int targetValue = (int) (ratio * editorMax);
+                editorScrollPane.getVerticalScrollBar().setValue(targetValue);
+            }
+        } catch (Exception ex) {
+            // 忽略异常
         }
     }
 

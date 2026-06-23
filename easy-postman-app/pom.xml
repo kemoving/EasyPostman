@@ -212,6 +212,11 @@
             <artifactId>org.eclipse.jgit.ssh.apache</artifactId>
             <version>${org.eclipse.jgit.version}</version>
         </dependency>
+        <dependency>
+  			<groupId>com.vladsch.flexmark</groupId>
+  			<artifactId>flexmark-all</artifactId>
+ 	 		<version>0.64.8</version>
+		</dependency>
     </dependencies>
 
     <build>
