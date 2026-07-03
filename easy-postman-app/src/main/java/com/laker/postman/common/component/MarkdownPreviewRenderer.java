@@ -70,22 +70,22 @@ public class MarkdownPreviewRenderer {
      * 获取表格样式
      */
     public static String getTableStyle() {
-        return "border-collapse:separate;border-spacing:0;width:100%;margin:0 0 12px 0;border-radius:6px;overflow:hidden;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";";
+        return "border-collapse:separate;border-spacing:0;width:100%;margin:0 0 16px 0;border-radius:8px;overflow:hidden;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";box-shadow:0 1px 3px rgba(0,0,0,0.06);";
     }
 
     /**
      * 获取表格单元格样式
      */
     public static String getTableCellStyle() {
-        return "padding:6px 10px;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";vertical-align:middle;";
+        return "padding:8px 12px;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";vertical-align:top;";
     }
 
     /**
      * 获取表格表头样式
      */
     public static String getTableHeaderStyle() {
-        String bgColor = toHex(ModernColors.getHoverBackgroundColor());
-        return getTableCellStyle() + "font-weight:600;background-color:" + bgColor + ";text-align:left;white-space:nowrap;";
+        String bgColor = toHex(ModernColors.getTableHeaderBackgroundColor());
+        return getTableCellStyle() + "font-weight:600;background-color:" + bgColor + ";text-align:left;white-space:nowrap;color:" + toHex(ModernColors.getTextPrimary()) + ";";
     }
 
     /**
@@ -93,7 +93,10 @@ public class MarkdownPreviewRenderer {
      */
     public static String getTableRowHoverStyle() {
         String hoverBg = toHex(ModernColors.getHoverBackgroundColor());
-        return "tr:hover{background-color:" + hoverBg + ";}";
+        String stripeBg = toHex(ModernColors.getEmptyCellBackground());
+        return "tr:nth-child(even){background-color:" + stripeBg + ";}" +
+               "tr:nth-child(even):hover{background-color:" + hoverBg + ";}" +
+               "tr:nth-child(odd):hover{background-color:" + hoverBg + ";}";
     }
 
     /**
@@ -101,10 +104,10 @@ public class MarkdownPreviewRenderer {
      */
     public static String getCodeBlockStyle() {
         return "background-color:" + toHex(ModernColors.getConsoleTextAreaBg()) +
-                ";padding:8px;overflow:auto;font-size:10px;line-height:1.5;border-radius:4px;" +
-                "margin:0 0 8px 0;font-family:monospace;color:" +
-                toHex(ModernColors.getConsoleText()) +
-                ";display:block;white-space:pre;word-wrap:normal;";
+                ";padding:12px 14px;overflow:auto;font-size:11px;line-height:1.6;border-radius:6px;" +
+                "margin:0 0 12px 0;font-family:'JetBrains Mono','Consolas','Monaco',monospace;color:" +
+                toHex(ModernColors.getTextSecondary()) +
+                ";display:block;white-space:pre;word-wrap:normal;border:1px solid " + toHex(ModernColors.getBorderLightColor()) + ";border-left:3px solid " + toHex(ModernColors.getAccent()) + ";";
     }
 
     /**
@@ -112,9 +115,9 @@ public class MarkdownPreviewRenderer {
      */
     public static String getInlineCodeStyle() {
         String bgColor = toHex(ModernColors.getHoverBackgroundColor());
-        String textColor = toHex(ModernColors.getErrorDark());
+        String textColor = toHex(ModernColors.getAccent());
         return "background-color:" + bgColor + ";color:" + textColor +
-                ";padding:1px 4px;margin:0 1px;font-size:10px;border-radius:3px;font-family:monospace;";
+                ";padding:2px 6px;margin:0 2px;font-size:11px;border-radius:4px;font-family:'JetBrains Mono','Consolas',monospace;font-weight:500;";
     }
 
     /**
@@ -122,16 +125,17 @@ public class MarkdownPreviewRenderer {
      */
     public static String getHeadingStyle(int level) {
         String dividerColor = toHex(ModernColors.getDividerBorderColor());
+        String accentColor = toHex(ModernColors.getAccent());
         return switch (level) {
             case 1 ->
-                    "font-size:18px;font-weight:600;margin:4px 0 4px 0;border-bottom:2px solid " + dividerColor + ";padding-bottom:0.2em;";
+                    "font-size:22px;font-weight:700;margin:20px 0 10px 0;color:" + accentColor + ";border-bottom:2px solid " + dividerColor + ";padding-bottom:6px;";
             case 2 ->
-                    "font-size:16px;font-weight:600;margin:4px 0 3px 0;border-bottom:1px solid " + dividerColor + ";padding-bottom:0.2em;";
-            case 3 -> "font-size:14px;font-weight:600;margin:4px 0 3px 0;";
-            case 4 -> "font-size:12px;font-weight:600;margin:4px 0 3px 0;";
-            case 5 -> "font-size:11px;font-weight:600;margin:4px 0 3px 0;";
+                    "font-size:18px;font-weight:600;margin:18px 0 8px 0;color:" + toHex(ModernColors.getTextPrimary()) + ";border-bottom:1px solid " + dividerColor + ";padding-bottom:4px;";
+            case 3 -> "font-size:16px;font-weight:600;margin:16px 0 6px 0;color:" + toHex(ModernColors.getTextPrimary()) + ";";
+            case 4 -> "font-size:14px;font-weight:600;margin:14px 0 6px 0;color:" + toHex(ModernColors.getTextPrimary()) + ";";
+            case 5 -> "font-size:13px;font-weight:600;margin:12px 0 4px 0;color:" + toHex(ModernColors.getTextSecondary()) + ";";
             case 6 ->
-                    "font-size:10px;font-weight:600;margin:4px 0 3px 0;color:" + toHex(ModernColors.getTextHint()) + ";";
+                    "font-size:12px;font-weight:500;margin:10px 0 4px 0;color:" + toHex(ModernColors.getTextHint()) + ";font-style:italic;";
             default -> "";
         };
     }
@@ -142,11 +146,11 @@ public class MarkdownPreviewRenderer {
     public static String getBlockquoteStyle() {
         Color accentColor = ModernColors.getAccent();
         String borderColor = toHex(accentColor);
-        String bgColor = String.format(java.util.Locale.ROOT, "rgba(%d,%d,%d,0.08)",
+        String bgColor = String.format(java.util.Locale.ROOT, "rgba(%d,%d,%d,0.1)",
                 accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue());
-        return "padding:6px 10px;color:" + toHex(ModernColors.getTextSecondary()) +
+        return "padding:10px 14px;color:" + toHex(ModernColors.getTextSecondary()) +
                 ";border-left:3px solid " + borderColor + ";background-color:" + bgColor +
-                ";margin:0 0 8px 0;border-radius:0 3px 3px 0;";
+                ";margin:0 0 12px 0;border-radius:0 6px 6px 0;font-style:italic;";
     }
 
     /**
@@ -163,13 +167,14 @@ public class MarkdownPreviewRenderer {
         String borderColor = toHex(ModernColors.getBorderLightColor());
         String accentColor = toHex(ModernColors.getAccent());
         String textColor = toHex(ModernColors.getTextHint());
+        String hoverBg = toHex(ModernColors.getHoverBackgroundColor());
         return ".task-list-item{list-style:none;margin-left:-20px;padding-left:20px;}" +
+               ".task-list-item:hover{background-color:" + hoverBg + ";border-radius:4px;margin-left:-22px;padding-left:22px;}" +
                ".task-list-item-checkbox{width:14px;height:14px;border:1px solid " + borderColor + ";" +
-               "border-radius:3px;vertical-align:middle;margin-right:6px;" +
+               "border-radius:4px;vertical-align:middle;margin-right:8px;cursor:pointer;" +
                "background-color:" + toHex(ModernColors.getCardBackgroundColor()) + ";}" +
                ".task-list-item-checkbox:checked{background-color:" + accentColor + ";border-color:" + accentColor + ";}" +
-               ".task-list-item-checkbox:checked::before{content:'✓';color:white;font-size:10px;" +
-               "display:flex;align-items:center;justify-content:center;height:100%;}" +
+               ".task-list-item-checkbox:checked::before{content:'✓';color:white;font-size:10px;}" +
                ".task-list-item-label{display:inline;}" +
                ".task-list-item-done{color:" + textColor + ";text-decoration:line-through;}";
     }
@@ -200,18 +205,22 @@ public class MarkdownPreviewRenderer {
         String fg = toHex(ModernColors.getTextPrimary());
         String linkColor = toHex(ModernColors.getAccent());
         String selectionBg = toHex(ModernColors.getSelectionBackgroundColor());
+        String secondaryFg = toHex(ModernColors.getTextSecondary());
+        String borderColor = toHex(ModernColors.getBorderLightColor());
         
-        // 使用缓存的样式字符串（如果已缓存且主题未变化）
         String styles = getCachedStyles();
 
         return "<!DOCTYPE html>"
             + "<html><head><meta charset='UTF-8'><style>"
             + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;"
-            + "font-size:12px;line-height:1.7;color:" + fg + ";background:" + bg + ";margin:12px 16px;word-wrap:break-word}"
-            + "a{color:" + linkColor + ";text-decoration:none;border-bottom:1px solid rgba(127,190,214,0.4)}"
-            + "a:hover{border-bottom-color:" + linkColor + ";text-decoration:underline}"
+            + "font-size:13px;line-height:1.8;color:" + fg + ";background:" + bg + ";margin:16px 20px;word-wrap:break-word}"
+            + "a{color:" + linkColor + ";text-decoration:none}"
+            + "a:hover{text-decoration:underline}"
             + "::selection{background:" + selectionBg + ";color:" + fg + "}"
-            + "img{max-width:100%;height:auto;border-radius:4px;margin:4px 0}"
+            + "img{max-width:100%;height:auto;border-radius:6px;margin:8px 0;box-shadow:0 2px 8px rgba(0,0,0,0.12)}"
+            + "hr{height:1px;border:none;background:" + borderColor + ";margin:24px 0}"
+            + "small{font-size:11px;color:" + secondaryFg + "}"
+            + "strong,b{font-weight:600}"
             + styles
             + "</style></head><body>"
             + bodyHtml
@@ -240,10 +249,15 @@ public class MarkdownPreviewRenderer {
                     for (int i = 1; i <= 6; i++) {
                         sb.append("h").append(i).append("{").append(getHeadingStyle(i)).append("}");
                     }
-                    sb.append("p{margin:0 0 8px 0;}");
+                    sb.append("p{margin:0 0 10px 0;}");
                     sb.append("br{margin:4px 0;}");
-                    sb.append("ul,ol{margin:0 0 8px 0;padding-left:20px;}");
-                    sb.append("li{margin:2px 0;}");
+                    sb.append("ul{margin:0 0 10px 0;padding-left:24px;list-style-type:disc;}");
+                    sb.append("ol{margin:0 0 10px 0;padding-left:24px;list-style-type:decimal;}");
+                    sb.append("li{margin:3px 0;line-height:1.6;}");
+                    sb.append("dl{margin:0 0 10px 0;}");
+                    sb.append("dt{font-weight:600;margin:6px 0 2px 0;}");
+                    sb.append("dd{margin:0 0 4px 20px;color:" + toHex(ModernColors.getTextSecondary()) + ";}");
+                    sb.append("mark{background-color:" + toHex(ModernColors.getSearchHighlightBackgroundColor()) + ";color:" + toHex(ModernColors.getTextPrimary()) + ";padding:1px 3px;border-radius:2px;}");
                     CACHED_STYLES = sb.toString();
                     CACHED_THEME_ID = currentThemeId;
                 }
