@@ -23,6 +23,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -66,6 +67,9 @@ public class EnhancedTablePanel extends JPanel {
     private int hoveredRow = -1;
     @Setter
     private boolean autoResizeOnRefresh = true;
+    @Getter
+    @Setter
+    private boolean cellDetailDialogOnDoubleClickEnabled = true;
     @Setter
     private Consumer<JPopupMenu> contextMenuCustomizer;
     /**
@@ -73,6 +77,8 @@ public class EnhancedTablePanel extends JPanel {
      */
     @Setter
     private Runnable viewDataChangedListener;
+    @Setter
+    private BiFunction<Integer, Integer, String> rowCountFormatter;
 
     /**
      * 超过此字符数时，单元格显示截断文字 + 省略号，并启用 tooltip
@@ -144,6 +150,7 @@ public class EnhancedTablePanel extends JPanel {
 
         updateHintLabel();
         applyFilterAndSort();
+        updateSortHeaders();
     }
 
     /**
@@ -156,6 +163,7 @@ public class EnhancedTablePanel extends JPanel {
         sortCol = -1;
         updateHintLabel();
         applyFilterAndSort();
+        updateSortHeaders();
     }
 
     /**
@@ -192,6 +200,26 @@ public class EnhancedTablePanel extends JPanel {
         return sortCol >= 0 && sortCol < currentColumns.length;
     }
 
+    public void setSort(int columnIndex, boolean ascending) {
+        if (columnIndex < 0 || columnIndex >= currentColumns.length) {
+            clearSort();
+            return;
+        }
+        sortCol = columnIndex;
+        sortAsc = ascending;
+        currentPage = 0;
+        applyFilterAndSort();
+        updateSortHeaders();
+    }
+
+    public void clearSort() {
+        sortCol = -1;
+        sortAsc = true;
+        currentPage = 0;
+        applyFilterAndSort();
+        updateSortHeaders();
+    }
+
     /**
      * 清空数据（保持列结构）
      */
@@ -202,6 +230,7 @@ public class EnhancedTablePanel extends JPanel {
         sortCol = -1;
         updateHintLabel();
         tableModel.setRowCount(0);
+        updateSortHeaders();
         updatePaginationControls();
         updateEmptyState();
         notifyViewDataChanged();
@@ -537,7 +566,9 @@ public class EnhancedTablePanel extends JPanel {
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                if (cellDetailDialogOnDoubleClickEnabled
+                        && e.getClickCount() == 2
+                        && SwingUtilities.isLeftMouseButton(e)) {
                     int row = table.rowAtPoint(e.getPoint());
                     int col = table.columnAtPoint(e.getPoint());
                     if (row >= 0 && col >= 0) {
@@ -786,6 +817,13 @@ public class EnhancedTablePanel extends JPanel {
     private void updateHintLabel() {
         int total = allRows.size();
         int filtered = filteredRows.size();
+        if (rowCountFormatter != null) {
+            String customText = rowCountFormatter.apply(filtered, total);
+            if (customText != null && !customText.isBlank()) {
+                hintLabel.setText(customText);
+                return;
+            }
+        }
         String suffix = UiI18n.get(UiMessageKeys.TABLE_ROWS_SUFFIX);
         if (!filterText.isEmpty() && filtered != total) {
             hintLabel.setText(UiI18n.get(UiMessageKeys.TABLE_ROWS_FILTERED,

@@ -53,10 +53,10 @@ final class RequestEditorBinder {
         }
 
         String body = draft.getBody();
-        view.requestBodyPanel.getBodyArea().setText(body);
         String bodyType = normalizeBodyType(draft.getBodyType(), body);
+        applyBodyContent(bodyType, body);
         view.requestBodyPanel.getBodyTypeComboBox().setSelectedItem(bodyType);
-        applyRawType(body);
+        applyRawType(RequestBodyPanel.BODY_TYPE_BINARY.equals(bodyType) ? "" : body);
         applyFormData(draft.getFormData());
         applyUrlencoded(draft.getUrlencoded());
 
@@ -115,6 +115,7 @@ final class RequestEditorBinder {
                 .proxyPolicy(settings.getProxyPolicy())
                 .httpVersion(settings.getHttpVersion())
                 .requestTimeoutMs(settings.getRequestTimeoutMs())
+                .webSocketPingIntervalMs(settings.getWebSocketPingIntervalMs())
                 .prescript(view.scriptPanel.getPrescript())
                 .postscript(view.scriptPanel.getPostscript())
                 .responses(responses)
@@ -137,14 +138,22 @@ final class RequestEditorBinder {
                 .proxyPolicy(draft.getProxyPolicy())
                 .httpVersion(draft.getHttpVersion())
                 .requestTimeoutMs(draft.getRequestTimeoutMs())
+                .webSocketPingIntervalMs(draft.getWebSocketPingIntervalMs())
                 .build();
     }
 
     private String readBodyText(String bodyType) {
-        if (RequestBodyPanel.BODY_TYPE_RAW.equals(bodyType)) {
-            return view.requestBodyPanel.getRawBody();
+        return view.requestBodyPanel.getBodyContent(bodyType);
+    }
+
+    private void applyBodyContent(String bodyType, String body) {
+        if (RequestBodyPanel.BODY_TYPE_BINARY.equals(bodyType)) {
+            view.requestBodyPanel.setRawBodyText("");
+            view.requestBodyPanel.setBinaryFilePath(body);
+            return;
         }
-        return view.requestBodyPanel.getBodyArea().getText().trim();
+        view.requestBodyPanel.setRawBodyText(body);
+        view.requestBodyPanel.setBinaryFilePath("");
     }
 
     private List<HttpFormData> readFormDataList(String bodyType, boolean fromModel) {

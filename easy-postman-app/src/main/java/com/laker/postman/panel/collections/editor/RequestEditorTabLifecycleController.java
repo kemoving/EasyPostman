@@ -29,11 +29,12 @@ final class RequestEditorTabLifecycleController {
         String tabTitle = title != null ? title : defaultRequestTitle;
         RequestEditSubPanel subPanel = new RequestEditSubPanel(IdUtil.simpleUUID(), protocol);
         tabbedPane.addTab(tabTitle, subPanel);
-        tabbedPane.setTabComponentAt(tabbedPane.getTabCount() - 1, new ClosableTabComponent(tabTitle, protocol));
+        tabbedPane.setTabComponentAt(tabbedPane.getTabCount() - 1,
+                ClosableTabComponent.forRequest(tabTitle, "GET", protocol));
         tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
 
         addPlusTab();
-        RequestEditorTabInserter.setTabNewRequest(subPanel, true);
+        RequestEditorTabInserter.setTabNewRequestMarker(subPanel, true);
         return subPanel;
     }
 

@@ -31,6 +31,8 @@ public class TimelinePanel extends JPanel {
     private static final int BOTTOM_PAD = 18;
     private static final int BAR_RADIUS = 5;
     private static final int MIN_BAR_WIDTH = 14;
+    private static final int SUB_MILLISECOND_MARKER_WIDTH = 4;
+    private static final int SUB_MILLISECOND_VISUAL_SLOT_WIDTH = 8;
     private static final int LABEL_LEFT_PAD = 22;
     private static final int LABEL_RIGHT_PAD = 16;
 
@@ -80,11 +82,11 @@ public class TimelinePanel extends JPanel {
             @Override
             public void mouseMoved(java.awt.event.MouseEvent e) {
                 int oldHovered = hoveredBarIndex;
-                hoveredBarIndex = getBarIndexAtPoint(e.getPoint());
+                hoveredBarIndex = getStageRowIndexAtPoint(e.getPoint());
 
                 // 只在悬停状态改变时重绘
                 if (oldHovered != hoveredBarIndex) {
-                    setCursor(hoveredBarIndex >= 0 ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+                    setCursor(Cursor.getDefaultCursor());
                     repaint();
                 }
             }
@@ -106,6 +108,14 @@ public class TimelinePanel extends JPanel {
      * 获取鼠标位置对应的瀑布条索引
      */
     private int getBarIndexAtPoint(Point p) {
+        return getStageIndexAtPoint(p, true);
+    }
+
+    private int getStageRowIndexAtPoint(Point p) {
+        return getStageIndexAtPoint(p, false);
+    }
+
+    private int getStageIndexAtPoint(Point p, boolean requireVisibleDurationBar) {
         if (p == null || stages.isEmpty()) {
             return -1;
         }
@@ -123,7 +133,11 @@ public class TimelinePanel extends JPanel {
         for (int i = 0; i < stages.size(); i++) {
             int barBottom = barY + BAR_HEIGHT;
             if (p.y >= barY && p.y <= barBottom) {
-                return i;
+                Stage stage = stages.get(i);
+                if (!requireVisibleDurationBar || durationMillis(stage) > 0) {
+                    return i;
+                }
+                return -1;
             }
             barY += BAR_HEIGHT + BAR_GAP;
         }
@@ -140,15 +154,32 @@ public class TimelinePanel extends JPanel {
         if (isPointInInfoArea(point)) {
             return buildConnectionInfoTooltip();
         }
-        int stageIndex = getBarIndexAtPoint(point);
+        int stageIndex = getStageRowIndexAtPoint(point);
         if (stageIndex >= 0 && stageIndex < stages.size()) {
             Stage stage = stages.get(stageIndex);
-            return "<html><b>" + escapeHtml(stage.label) + "</b><br/>"
-                    + escapeHtml(I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION))
-                    + ": " + Math.max(0, stage.end - stage.start) + " ms<br/>"
-                    + escapeHtml(stage.desc != null ? stage.desc : "") + "</html>";
+            return buildStageTooltip(stage);
         }
         return null;
+    }
+
+    private String buildStageTooltip(Stage stage) {
+        StringBuilder tooltip = new StringBuilder("<html><b>")
+                .append(escapeHtml(stage.label))
+                .append("</b><br/>")
+                .append(escapeHtml(I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION)))
+                .append(": ")
+                .append(escapeHtml(formatStageDuration(stage)));
+        String note = getStageTimingNote(stage);
+        if (note != null && !note.isBlank()) {
+            tooltip.append("<br/>")
+                    .append(escapeHtml(note));
+        }
+        if (stage.desc != null && !stage.desc.isBlank()) {
+            tooltip.append("<br/>")
+                    .append(escapeHtml(stage.desc));
+        }
+        tooltip.append("</html>");
+        return tooltip.toString();
     }
 
     @Override
@@ -223,42 +254,17 @@ public class TimelinePanel extends JPanel {
         int stageLabelX = sectionX + LABEL_LEFT_PAD;
         int barStartX = stageLabelX + labelMaxWidth + LABEL_RIGHT_PAD;
         int panelW = getWidth();
-        int minBarSum = MIN_BAR_WIDTH * n;
-        int availableBarSum = Math.max(
-                minBarSum,
-                panelW - barStartX - RIGHT_PAD
-        );
-        int totalBarSum = 0;
-        long totalDuration = total > 0 ? total : 1;
-        int[] barWidths = new int[n];
-        // 先按比例分配理论宽度
-        for (int i = 0; i < n; i++) {
-            long duration = Math.max(0, stages.get(i).end - stages.get(i).start);
-            double ratio = (double) duration / totalDuration;
-            if (duration == 0) {
-                barWidths[i] = 2;
-            } else {
-                barWidths[i] = MIN_BAR_WIDTH + (int) Math.round(ratio * (availableBarSum - minBarSum));
-            }
-            totalBarSum += barWidths[i];
-        }
-        // 如果总宽度超出可用宽度，则按比例缩小
-        if (totalBarSum > availableBarSum) {
-            double scale = (double) availableBarSum / totalBarSum;
-            totalBarSum = 0;
-            for (int i = 0; i < n; i++) {
-                barWidths[i] = Math.max(MIN_BAR_WIDTH, (int) Math.round(barWidths[i] * scale));
-                totalBarSum += barWidths[i];
-            }
-        }
+        boolean hasSubMillisecondStage = stages.stream().anyMatch(TimelinePanel::isSubMillisecondStage);
+        int trackRightX = Math.max(barStartX + MIN_BAR_WIDTH, panelW - RIGHT_PAD);
+        int trackWidth = Math.max(MIN_BAR_WIDTH, trackRightX - barStartX);
+        long displayTotalDuration = Math.max(0, total);
+        int[] barWidths = resolveStageVisualWidths(stages, displayTotalDuration, trackWidth);
 
         // 绘制
         // 瀑布条Y坐标 = 信息区高度 + 信息区底部间距 + 区域间距 + 瀑布条区域顶部内边距
         int barY = barAreaTop + TOP_PAD;
         int currentX = barStartX;
-        int trackRightX = Math.max(barStartX + MIN_BAR_WIDTH, panelW - RIGHT_PAD);
-        int trackWidth = Math.max(MIN_BAR_WIDTH, trackRightX - barStartX);
-        drawScaleHeader(g2, stageLabelX, barStartX, trackWidth, barAreaTop, totalDuration);
+        drawScaleHeader(g2, stageLabelX, barStartX, trackWidth, barAreaTop, displayTotalDuration, hasSubMillisecondStage);
 
         // 计算文字垂直居中的位置
         g2.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
@@ -306,36 +312,16 @@ public class TimelinePanel extends JPanel {
                 g2.drawLine(gridX, barY + 2, gridX, barY + BAR_HEIGHT - 2);
             }
 
-            // bar 区域 - 优化渐变和阴影效果
-            if (barW <= 3) {
-                g2.setColor(TimelineTheme.zeroDurationBar());
-                g2.fillRoundRect(currentX, barY + 2, Math.max(2, barW), BAR_HEIGHT - 4, 3, 3);
-            } else {
-                g2.setColor(TimelineTheme.barShadow());
-                g2.fillRoundRect(currentX + 1, barY + 1, barW, BAR_HEIGHT, BAR_RADIUS, BAR_RADIUS);
-
-                // 使用垂直渐变，从稍亮到稍暗
-                float brightnessMultiplier = 1.1f;
-                float darknessMultiplier = 0.85f;
-
-                // 悬停时增强颜色亮度
-                if (isHovered) {
-                    brightnessMultiplier *= 1.1f;
-                    darknessMultiplier *= 0.95f;
-                }
-
-                Color topColor = brighter(color, brightnessMultiplier);
-                Color bottomColor = darker(color, darknessMultiplier);
-
-                GradientPaint gp = new GradientPaint(
-                        currentX, (float) barY, topColor,
-                        currentX, (float) (barY + BAR_HEIGHT), bottomColor
-                );
-                g2.setPaint(gp);
+            // bar 区域：保持扁平语义色，避免把耗时阶段画成过重的状态卡片。
+            long duration = durationMillis(s);
+            String ms = formatStageDuration(s);
+            int strW = g2.getFontMetrics(FontsUtil.getDefaultFont(Font.PLAIN)).stringWidth(ms);
+            if (duration > 0) {
+                g2.setColor(color);
                 g2.fillRoundRect(currentX, barY, barW, BAR_HEIGHT, BAR_RADIUS, BAR_RADIUS);
 
                 g2.setColor(TimelineTheme.barHighlight(isHovered));
-                g2.fillRoundRect(currentX, barY, barW, 2, BAR_RADIUS, BAR_RADIUS);
+                g2.fillRoundRect(currentX, barY, barW, 1, BAR_RADIUS, BAR_RADIUS);
 
                 // 悬停时添加外边框高亮
                 if (isHovered) {
@@ -343,25 +329,24 @@ public class TimelinePanel extends JPanel {
                     g2.setStroke(new BasicStroke(1.5f));
                     g2.drawRoundRect(currentX, barY, barW, BAR_HEIGHT, BAR_RADIUS, BAR_RADIUS);
                 }
+            } else if (isSubMillisecondStage(s)) {
+                int markerX = Math.max(barStartX, resolveSubMillisecondMarkerX(
+                        currentX + Math.max(0, (barW - SUB_MILLISECOND_MARKER_WIDTH) / 2),
+                        SUB_MILLISECOND_MARKER_WIDTH,
+                        trackRightX
+                ));
+                g2.setColor(color);
+                g2.fillRoundRect(markerX, barY, SUB_MILLISECOND_MARKER_WIDTH, BAR_HEIGHT, BAR_RADIUS, BAR_RADIUS);
             }
 
-            // 耗时始终在bar内右侧，bar太窄则不显示
-            String ms = (s.end - s.start) + "ms";
+            // 耗时文字只放在柱子内部；窄柱和 <1ms> 标记通过 tooltip 展示完整耗时。
             g2.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
-            int strW = g2.getFontMetrics().stringWidth(ms);
-            if (barW > strW + 12) {
+            if (duration > 0 && shouldDrawDurationTextInsideBar(barW, strW)) {
                 g2.setColor(TimelineTheme.barText());
                 g2.drawString(ms, currentX + barW - strW - 6, barY + textYOffset);
-            } else if (s.end > s.start) {
-                g2.setColor(TimelineTheme.infoText());
-                int outsideX = currentX + barW + 6;
-                int maxOutsideX = trackRightX - strW - 4;
-                if (outsideX <= maxOutsideX) {
-                    g2.drawString(ms, outsideX, barY + textYOffset);
-                }
             }
-            // 只有非0ms阶段才递增currentX
-            if (barW > 3) {
+            // 已观测到的阶段都会占用视觉位置；未记录阶段只保留空轨道。
+            if (hasObservedTiming(s)) {
                 currentX += barW;
             }
         }
@@ -450,13 +435,14 @@ public class TimelinePanel extends JPanel {
                                  int trackX,
                                  int trackWidth,
                                  int barAreaTop,
-                                 long totalDuration) {
+                                 long totalDuration,
+                                 boolean hasSubMillisecondStage) {
         g2.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -2));
         FontMetrics fm = g2.getFontMetrics();
         int baseline = barAreaTop + 20;
         g2.setColor(TimelineTheme.descriptionText());
         g2.drawString(I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_TOTAL_DURATION)
-                + ": " + formatDuration(totalDuration), labelX, baseline);
+                + ": " + formatTotalDuration(totalDuration, hasSubMillisecondStage), labelX, baseline);
 
         for (int i = 0; i <= 4; i++) {
             long value = Math.round(totalDuration * (i / 4.0d));
@@ -476,6 +462,34 @@ public class TimelinePanel extends JPanel {
 
     private String formatDuration(long millis) {
         return Math.max(0, millis) + "ms";
+    }
+
+    private String formatTotalDuration(long millis, boolean hasSubMillisecondStage) {
+        if (millis == 0 && hasSubMillisecondStage) {
+            return I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION_SUB_MILLISECOND);
+        }
+        return formatDuration(millis);
+    }
+
+    private String formatStageDuration(Stage stage) {
+        long duration = durationMillis(stage);
+        if (duration > 0) {
+            return formatDuration(duration);
+        }
+        if (isSubMillisecondStage(stage)) {
+            return I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION_SUB_MILLISECOND);
+        }
+        return I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION_NOT_RECORDED);
+    }
+
+    private String getStageTimingNote(Stage stage) {
+        if (isSubMillisecondStage(stage)) {
+            return I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION_SUB_MILLISECOND_NOTE);
+        }
+        if (!hasObservedTiming(stage)) {
+            return I18nUtil.getMessage(MessageKeys.WATERFALL_STAGE_DURATION_NOT_RECORDED_NOTE);
+        }
+        return null;
     }
 
     private void drawInfoItem(Graphics2D g2, InfoItem item, int x, int baseline, int width, int labelWidth) {
@@ -599,26 +613,6 @@ public class TimelinePanel extends JPanel {
                 .replace("'", "&#39;");
     }
 
-    /**
-     * 调整颜色使其变亮
-     */
-    private Color brighter(Color color, float factor) {
-        int r = Math.min(255, (int) (color.getRed() * factor));
-        int g = Math.min(255, (int) (color.getGreen() * factor));
-        int b = Math.min(255, (int) (color.getBlue() * factor));
-        return new Color(r, g, b);
-    }
-
-    /**
-     * 调整颜色使其变暗
-     */
-    private Color darker(Color color, float factor) {
-        int r = (int) (color.getRed() * factor);
-        int g = (int) (color.getGreen() * factor);
-        int b = (int) (color.getBlue() * factor);
-        return new Color(r, g, b);
-    }
-
     // 计算两列摘要区实际行数（用于动态布局）
     private int getInfoRowsCount() {
         int rows = (buildConnectionInfoItems().size() + 1) / 2;
@@ -643,6 +637,96 @@ public class TimelinePanel extends JPanel {
             this.desc = desc;
         }
 
+    }
+
+    private static long durationMillis(Stage stage) {
+        return Math.max(0, stage.end - stage.start);
+    }
+
+    private static boolean hasObservedTiming(Stage stage) {
+        return durationMillis(stage) > 0 || isSubMillisecondStage(stage);
+    }
+
+    private static boolean isSubMillisecondStage(Stage stage) {
+        return stage.start > 0 && stage.end == stage.start;
+    }
+
+    private static boolean hasObservedRange(long start, long end) {
+        return start > 0 && end >= start;
+    }
+
+    static boolean shouldDrawDurationTextInsideBar(int barWidth, int textWidth) {
+        return barWidth > Math.max(0, textWidth) + 12;
+    }
+
+    static int resolveSubMillisecondMarkerX(int desiredMarkerX, int markerWidth, int trackRightX) {
+        return Math.min(desiredMarkerX, trackRightX - Math.max(0, markerWidth));
+    }
+
+    static int[] resolveStageVisualWidths(List<Stage> stages, long totalDuration, int availableWidth) {
+        if (stages == null || stages.isEmpty()) {
+            return new int[0];
+        }
+        int[] widths = new int[stages.size()];
+        if (availableWidth <= 0) {
+            return widths;
+        }
+
+        int durationStageCount = 0;
+        int subMillisecondStageCount = 0;
+        long durationSum = 0;
+        for (Stage stage : stages) {
+            long duration = durationMillis(stage);
+            if (duration > 0) {
+                durationStageCount++;
+                durationSum += duration;
+            } else if (isSubMillisecondStage(stage)) {
+                subMillisecondStageCount++;
+            }
+        }
+        if (durationStageCount == 0 && subMillisecondStageCount == 0) {
+            return widths;
+        }
+
+        int subMillisecondSlotWidth = 0;
+        if (subMillisecondStageCount > 0) {
+            int stageCount = durationStageCount + subMillisecondStageCount;
+            int maxSlotWidth = Math.max(1, availableWidth / Math.max(1, stageCount));
+            subMillisecondSlotWidth = Math.min(SUB_MILLISECOND_VISUAL_SLOT_WIDTH, maxSlotWidth);
+            if ((long) subMillisecondSlotWidth * subMillisecondStageCount > availableWidth) {
+                subMillisecondSlotWidth = Math.max(1, availableWidth / subMillisecondStageCount);
+            }
+        }
+
+        int subMillisecondWidthSum = subMillisecondSlotWidth * subMillisecondStageCount;
+        int durationAvailableWidth = Math.max(0, availableWidth - subMillisecondWidthSum);
+        int minDurationWidth = durationStageCount == 0 ? 0 : Math.min(MIN_BAR_WIDTH, durationAvailableWidth / durationStageCount);
+        int minDurationWidthSum = minDurationWidth * durationStageCount;
+        int remainingDurationWidth = Math.max(0, durationAvailableWidth - minDurationWidthSum);
+        int remainingExtraWidth = remainingDurationWidth;
+        int remainingDurationStages = durationStageCount;
+        long ratioTotalDuration = durationSum > 0 ? durationSum : Math.max(1, totalDuration);
+
+        for (int i = 0; i < stages.size(); i++) {
+            Stage stage = stages.get(i);
+            long duration = durationMillis(stage);
+            if (duration > 0) {
+                remainingDurationStages--;
+                int extraWidth;
+                if (remainingDurationStages == 0) {
+                    extraWidth = remainingExtraWidth;
+                } else {
+                    extraWidth = (int) Math.round((double) remainingDurationWidth * duration / ratioTotalDuration);
+                    extraWidth = Math.min(extraWidth, remainingExtraWidth);
+                }
+                widths[i] = minDurationWidth + extraWidth;
+                remainingExtraWidth -= extraWidth;
+            } else if (isSubMillisecondStage(stage)) {
+                widths[i] = subMillisecondSlotWidth;
+            }
+        }
+
+        return widths;
     }
 
     // 工具方法：根据 HttpEventInfo 生成六大阶段（即使为0也显示）
@@ -684,35 +768,35 @@ public class TimelinePanel extends JPanel {
             long respBS = info.getResponseBodyStart();
             long respBE = info.getResponseBodyEnd();
             // DNS
-            if (dnsS > 0 && dnsE > dnsS) {
+            if (hasObservedRange(dnsS, dnsE)) {
                 starts[0] = dnsS;
                 ends[0] = dnsE;
             }
             // Socket
-            if (connS > 0 && connE > connS) {
+            if (hasObservedRange(connS, connE)) {
                 long socketEnd = (sslS > connS && sslE > sslS && sslE <= connE) ? sslS : connE;
                 starts[1] = connS;
                 ends[1] = socketEnd;
             }
             // SSL
-            if (sslS > 0 && sslE > sslS) {
+            if (hasObservedRange(sslS, sslE)) {
                 starts[2] = sslS;
                 ends[2] = sslE;
             }
             // Request Send
             long reqStart = Math.min(reqHS > 0 ? reqHS : Long.MAX_VALUE, reqBS > 0 ? reqBS : Long.MAX_VALUE);
             long reqEnd = Math.max(reqHE, reqBE);
-            if (reqEnd > reqStart) {
+            if (reqStart != Long.MAX_VALUE && reqEnd > 0 && reqEnd >= reqStart) {
                 starts[3] = reqStart;
                 ends[3] = reqEnd;
             }
             // Waiting (TTFB)
-            if (reqEnd > 0 && respHS > reqEnd) {
+            if (reqEnd > 0 && respHS >= reqEnd) {
                 starts[4] = reqEnd;
                 ends[4] = respHS;
             }
             // Content Download
-            if (respBS > 0 && respBE > respBS) {
+            if (hasObservedRange(respBS, respBE)) {
                 starts[5] = respBS;
                 ends[5] = respBE;
             }

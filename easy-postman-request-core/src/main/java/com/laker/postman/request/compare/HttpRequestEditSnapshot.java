@@ -42,10 +42,12 @@ record HttpRequestEditSnapshot(
         HttpRequestProxyPolicy proxyPolicy,
         String httpVersion,
         Integer requestTimeoutMs,
+        Integer webSocketPingIntervalMs,
         String prescript,
         String postscript
 ) {
-    static HttpRequestEditSnapshot from(HttpRequestItem item, List<HttpHeader> headers) {
+    static HttpRequestEditSnapshot from(HttpRequestEditNormalizer.NormalizedRequest request) {
+        HttpRequestItem item = request.item();
         return new HttpRequestEditSnapshot(
                 string(item.getId()),
                 string(item.getName()),
@@ -53,11 +55,11 @@ record HttpRequestEditSnapshot(
                 string(item.getUrl()),
                 string(item.getMethod()),
                 item.getProtocol() == null ? RequestItemProtocolEnum.HTTP : item.getProtocol(),
-                headerEntries(headers),
+                headerEntries(request.headers()),
                 normalizeBodyType(item),
                 string(item.getBody()),
                 paramEntries(item.getPathVariablesList()),
-                paramEntries(item.getParamsList()),
+                paramEntries(request.params()),
                 formDataEntries(item.getFormDataList()),
                 urlencodedEntries(item.getUrlencodedList()),
                 normalizeAuthType(item.getAuthType()),
@@ -72,6 +74,7 @@ record HttpRequestEditSnapshot(
                 item.resolveProxyPolicy(),
                 normalizeHttpVersion(item.getHttpVersion()),
                 item.getRequestTimeoutMs(),
+                item.getWebSocketPingIntervalMs(),
                 string(item.getPrescript()),
                 string(item.getPostscript())
         );

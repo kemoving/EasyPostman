@@ -17,8 +17,6 @@ import com.laker.postman.util.MessageKeys;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -28,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * WebSocket响应体面板，展示消息类型、时间、内容和断言结果，支持搜索、清除、类型过滤。
@@ -42,6 +41,7 @@ public class WebSocketResponsePanel extends JPanel {
     private final StreamMessageLogBuffer<MessageRow> logBuffer;
     private final ConcurrentLinkedQueue<MessageRow> pendingRows = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean pendingFlushQueued = new AtomicBoolean();
+    private final AtomicLong lastMessageTimestampMs = new AtomicLong(Long.MIN_VALUE);
     private final JScrollPane tableScrollPane;
     private final JSplitPane assertionSplitPane;
     private final StreamAssertionDetailsPanel assertionDetailsPanel;
@@ -49,24 +49,28 @@ public class WebSocketResponsePanel extends JPanel {
 
     private static final int COLUMN_TYPE = 0;
     private static final int COLUMN_TIME = 1;
-    private static final int COLUMN_CONTENT = 2;
-    private static final int COLUMN_ASSERTION = 3;
+    private static final int COLUMN_INTERVAL = 2;
+    private static final int COLUMN_CONTENT = 3;
+    private static final int COLUMN_ASSERTION = 4;
 
     private static final String[] COLUMN_NAMES = {
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_COLUMN_TYPE),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_COLUMN_TIME),
+            I18nUtil.getMessage(MessageKeys.STREAM_COLUMN_INTERVAL),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_COLUMN_CONTENT),
             I18nUtil.getMessage(MessageKeys.FUNCTIONAL_TABLE_ASSERTION)
     };
     private static final String[] TYPE_FILTERS = {
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_ALL),
+            I18nUtil.getMessage(MessageKeys.STREAM_FILTER_MESSAGES),
+            I18nUtil.getMessage(MessageKeys.STREAM_FILTER_STATUS),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_SENT),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_RECEIVED),
+            I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_BINARY),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_CONNECTED),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_CLOSED),
             I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_WARNING),
-            I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_INFO),
-            I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_BINARY)
+            I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_INFO)
     };
 
     public WebSocketResponsePanel() {
@@ -97,30 +101,21 @@ public class WebSocketResponsePanel extends JPanel {
         // 表格
         tableModel = new StreamMessageTableModel<>(COLUMN_NAMES, this::messageValueAt);
         table = new JTable(tableModel);
-        table.setRowHeight(26);
-        // Type 列（类型图标）：显示 "Type"（4个字符）+ 图标
-        table.getColumnModel().getColumn(COLUMN_TYPE).setMinWidth(100);
-        table.getColumnModel().getColumn(COLUMN_TYPE).setPreferredWidth(118);
-        table.getColumnModel().getColumn(COLUMN_TYPE).setMaxWidth(150);
-        table.getColumnModel().getColumn(COLUMN_TYPE).setCellRenderer(new StreamMessageTypeCellRenderer());
-        // Time 列（时间）：显示 "Time"（4个字符）+ 时间戳
-        table.getColumnModel().getColumn(COLUMN_TIME).setMinWidth(90);
-        table.getColumnModel().getColumn(COLUMN_TIME).setPreferredWidth(110);
-        table.getColumnModel().getColumn(COLUMN_TIME).setMaxWidth(150);
-        // 设置 Time 列居中
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        table.getColumnModel().getColumn(COLUMN_TIME).setCellRenderer(centerRenderer);
-        // Content 列（内容）：显示 "Content"（7个字符）+ 消息内容，可自由调整
-        table.getColumnModel().getColumn(COLUMN_CONTENT).setMinWidth(150);
-        table.getColumnModel().getColumn(COLUMN_CONTENT).setPreferredWidth(400);
-        // Assertion 列（断言结果图标）：显示 "Assertion"（9个字符）+ 图标
-        table.getColumnModel().getColumn(COLUMN_ASSERTION).setMinWidth(90);
-        table.getColumnModel().getColumn(COLUMN_ASSERTION).setPreferredWidth(100);
-        table.getColumnModel().getColumn(COLUMN_ASSERTION).setMaxWidth(120);
-        table.getColumnModel().getColumn(COLUMN_ASSERTION).setCellRenderer(new StreamAssertionSummaryCellRenderer());
-        table.setCellSelectionEnabled(true);
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        StreamMessageTableSupport.configureBaseTable(table, viewRow -> {
+            MessageRow row = getVisibleRow(viewRow);
+            return row == null ? null : row.type;
+        });
+        StreamMessageTableSupport.configureTypeColumn(table, COLUMN_TYPE);
+        StreamMessageTableSupport.configureTimeColumn(table, COLUMN_TIME, viewRow -> {
+            MessageRow row = getVisibleRow(viewRow);
+            return row == null ? null : row.type;
+        });
+        StreamMessageTableSupport.configureIntervalColumn(table, COLUMN_INTERVAL, viewRow -> {
+            MessageRow row = getVisibleRow(viewRow);
+            return row == null ? null : row.type;
+        });
+        StreamMessageTableSupport.configureContentColumn(table, COLUMN_CONTENT, 680);
+        StreamMessageTableSupport.configureAssertionColumn(table, COLUMN_ASSERTION);
         // 鼠标监听：内容列右键菜单，断言列单击查看结果，内容列双击查看详情。
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -158,7 +153,7 @@ public class WebSocketResponsePanel extends JPanel {
                     table.setColumnSelectionInterval(viewCol, viewCol);
                     showAssertionDetails(messageRow);
                 } else if (col == COLUMN_CONTENT && e.getClickCount() == 2) {
-                    showContentDialog(messageRow.content);
+                    showContentDialog(messageRow);
                 }
             }
 
@@ -176,17 +171,16 @@ public class WebSocketResponsePanel extends JPanel {
                             return;
                         }
                         table.setRowSelectionInterval(row, row);
-                        String content = messageRow.content;
                         JPopupMenu popupMenu = new JPopupMenu();
                         ToolWindowSurfaceStyle.applyPopupMenuCard(popupMenu);
                         JMenuItem copyItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.BUTTON_COPY));
                         JMenuItem detailItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.BUTTON_DETAIL));
                         copyItem.addActionListener(ev -> {
                             // 复制内容到剪贴板
-                            StringSelection selection = new StringSelection(content);
+                            StringSelection selection = new StringSelection(buildDetailContent(messageRow));
                             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
                         });
-                        detailItem.addActionListener(ev -> showContentDialog(content));
+                        detailItem.addActionListener(ev -> showContentDialog(messageRow));
                         popupMenu.add(copyItem);
                         popupMenu.add(detailItem);
                         popupMenu.show(e.getComponent(), e.getX(), e.getY());
@@ -210,27 +204,6 @@ public class WebSocketResponsePanel extends JPanel {
         assertionSplitPane.setDividerSize(0);
         add(assertionSplitPane, BorderLayout.CENTER);
 
-        // 美化表格
-        JTableHeader header = table.getTableHeader();
-        header.setFont(header.getFont().deriveFont(Font.BOLD));
-        table.setGridColor(ModernColors.getTableGridColor());
-        table.setShowGrid(true);
-        table.setRowHeight(24);
-        table.setBorder(BorderFactory.createEmptyBorder());
-        // 选中行加粗
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (isSelected) {
-                    c.setFont(c.getFont().deriveFont(Font.BOLD));
-                } else {
-                    c.setFont(c.getFont().deriveFont(Font.PLAIN));
-                }
-                return c;
-            }
-        });
-
         // 事件
         clearButton.addActionListener(e -> clearMessages());
         searchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -249,8 +222,8 @@ public class WebSocketResponsePanel extends JPanel {
         typeFilterBox.addActionListener(e -> requestFilterAndShow());
     }
 
-    public void addMessage(MessageType type, String time, String content, List<TestResult> testResults) {
-        MessageRow row = new MessageRow(type, time, content, testResults);
+    public void addMessage(MessageType type, String time, Long timestampMs, String content, List<TestResult> testResults) {
+        MessageRow row = new MessageRow(type, time, timestampMs, nextIntervalMs(timestampMs), content, testResults);
         pendingRows.add(row);
         requestPendingRowsFlush();
     }
@@ -310,6 +283,7 @@ public class WebSocketResponsePanel extends JPanel {
             pendingRows.clear();
             logBuffer.clear();
             tableModel.clear();
+            lastMessageTimestampMs.set(Long.MIN_VALUE);
             assertionDetailsPanel.hideDetails();
             updateAssertionSplitPane();
             searchField.setNoResult(false);
@@ -339,6 +313,7 @@ public class WebSocketResponsePanel extends JPanel {
         return switch (column) {
             case COLUMN_TYPE -> row.type;
             case COLUMN_TIME -> row.time;
+            case COLUMN_INTERVAL -> StreamMessageTableSupport.formatInterval(row.intervalMs);
             case COLUMN_CONTENT -> row.content;
             case COLUMN_ASSERTION -> StreamAssertionSummary.from(row.testResults);
             default -> null;
@@ -346,8 +321,7 @@ public class WebSocketResponsePanel extends JPanel {
     }
 
     private boolean matchesFilter(MessageRow row, String search, String typeFilter) {
-        return (I18nUtil.getMessage(MessageKeys.WEBSOCKET_TYPE_ALL).equals(typeFilter)
-                || StreamMessageUiMetadata.display(row.type).equals(typeFilter))
+        return StreamMessageTableSupport.matchesTypeFilter(row.type, typeFilter)
                 && (search.isEmpty() || safeLower(row.content).contains(search));
     }
 
@@ -380,6 +354,17 @@ public class WebSocketResponsePanel extends JPanel {
         } else {
             SwingUtilities.invokeLater(task);
         }
+    }
+
+    private Long nextIntervalMs(Long timestampMs) {
+        if (timestampMs == null) {
+            return null;
+        }
+        long previous = lastMessageTimestampMs.getAndSet(timestampMs);
+        if (previous == Long.MIN_VALUE) {
+            return null;
+        }
+        return Math.max(0L, timestampMs - previous);
     }
 
     private boolean isScrolledNearBottom() {
@@ -448,12 +433,17 @@ public class WebSocketResponsePanel extends JPanel {
     public static class MessageRow {
         public final MessageType type;
         public final String time;
+        public final Long timestampMs;
+        public final Long intervalMs;
         public final String content;
         public final List<TestResult> testResults;
 
-        public MessageRow(MessageType type, String time, String content, List<TestResult> testResults) {
+        public MessageRow(MessageType type, String time, Long timestampMs, Long intervalMs,
+                          String content, List<TestResult> testResults) {
             this.type = type;
             this.time = time;
+            this.timestampMs = timestampMs;
+            this.intervalMs = intervalMs;
             this.content = content;
             this.testResults = testResults;
         }
@@ -505,14 +495,40 @@ public class WebSocketResponsePanel extends JPanel {
         assertionSplitPane.repaint();
     }
 
-    private void showContentDialog(String content) {
-        boolean isJson = JSONUtil.isTypeJSON(content);
+    private void showContentDialog(MessageRow row) {
+        boolean isJson = JSONUtil.isTypeJSON(row.content);
         StreamMessageContentDialog.show(
                 this,
                 I18nUtil.getMessage(MessageKeys.WEBSOCKET_DIALOG_TITLE),
-                content,
+                buildDetailFields(row),
+                row.content,
                 isJson,
-                () -> formatJson(content)
+                () -> formatJson(row.content)
+        );
+    }
+
+    private String buildDetailContent(MessageRow row) {
+        return StreamMessageContentDialog.buildDetailCopyText(buildDetailFields(row), row.content);
+    }
+
+    private List<StreamMessageContentDialog.DetailField> buildDetailFields(MessageRow row) {
+        return List.of(
+                new StreamMessageContentDialog.DetailField(
+                        I18nUtil.getMessage(MessageKeys.STREAM_DETAIL_SOURCE),
+                        StreamMessageTableSupport.sourceDisplay(row.type)
+                ),
+                new StreamMessageContentDialog.DetailField(
+                        I18nUtil.getMessage(MessageKeys.SSE_DETAIL_TYPE),
+                        StreamMessageUiMetadata.display(row.type)
+                ),
+                new StreamMessageContentDialog.DetailField(
+                        I18nUtil.getMessage(MessageKeys.SSE_DETAIL_TIME),
+                        row.time == null || row.time.isBlank() ? I18nUtil.getMessage(MessageKeys.SSE_VALUE_NONE) : row.time
+                ),
+                new StreamMessageContentDialog.DetailField(
+                        I18nUtil.getMessage(MessageKeys.STREAM_COLUMN_INTERVAL),
+                        StreamMessageTableSupport.formatInterval(row.intervalMs)
+                )
         );
     }
 

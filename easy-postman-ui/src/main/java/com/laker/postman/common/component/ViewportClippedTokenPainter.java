@@ -65,6 +65,8 @@ public class ViewportClippedTokenPainter implements TokenPainter {
     @Override
     public float paintSelected(Token token, Graphics2D g, float x, float y, RSyntaxTextArea host,
                                TabExpander e, float clipStart, boolean useSTC) {
+        // 选中态也保持分块绘制。这里优先保证长 token 横向拖动性能；
+        // 不再回退到 RSTA 默认 painter，避免选区拖动时整段长 token 绘制导致卡顿。
         return paintImpl(token, g, x, y, host, e, clipStart, false, useSTC);
     }
 
@@ -263,4 +265,5 @@ public class ViewportClippedTokenPainter implements TokenPainter {
             return actualLeft > clipBounds.x || actualRight < clipRight;
         }
     }
+
 }

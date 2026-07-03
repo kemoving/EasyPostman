@@ -15,14 +15,6 @@ import java.awt.Component;
 @UtilityClass
 public class RequestEditorTabInserter {
 
-    public static RequestEditSubPanel insertRequestTab(HttpRequestItem item) {
-        return insertRequestTab(item, true, false);
-    }
-
-    public static RequestEditSubPanel insertRequestTab(HttpRequestItem item, boolean selectTab) {
-        return insertRequestTab(item, selectTab, false);
-    }
-
     public static RequestEditSubPanel insertRequestTab(
             HttpRequestItem item,
             boolean selectTab,
@@ -46,7 +38,7 @@ public class RequestEditorTabInserter {
             insertIndex--;
         }
         tabbedPane.insertTab(tabTitle, null, subPanel, null, insertIndex);
-        tabbedPane.setTabComponentAt(insertIndex, new ClosableTabComponent(tabTitle, item.getProtocol()));
+        tabbedPane.setTabComponentAt(insertIndex, ClosableTabComponent.forRequest(tabTitle, item));
         boolean shouldSelectInsertedTab = selectTab;
         if (shouldSelectInsertedTab && deferEditorInitialization) {
             shouldSelectInsertedTab = requestEditPanel.isStartupRestoreSelectingLastTab();
@@ -61,7 +53,7 @@ public class RequestEditorTabInserter {
         return subPanel;
     }
 
-    public static void setTabNewRequest(RequestEditSubPanel panel, boolean isNew) {
+    public static void setTabNewRequestMarker(RequestEditSubPanel panel, boolean isNew) {
         JTabbedPane tabbedPane = UiSingletonFactory.getInstance(RequestEditorPanel.class).getTabbedPane();
         int idx = tabbedPane.indexOfComponent(panel);
         if (idx < 0) {
@@ -69,7 +61,7 @@ public class RequestEditorTabInserter {
         }
         Component tabComp = tabbedPane.getTabComponentAt(idx);
         if (tabComp instanceof ClosableTabComponent closable) {
-            closable.setNewRequest(isNew);
+            closable.updateMarkers(markers -> markers.withNewRequest(isNew));
         }
     }
 }

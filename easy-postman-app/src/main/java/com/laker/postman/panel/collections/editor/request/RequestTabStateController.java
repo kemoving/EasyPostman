@@ -22,9 +22,12 @@ final class RequestTabStateController {
     private final RequestItemProtocolEnum protocol;
     private final RequestViewComponents view;
 
-    void bindListeners(Runnable dirtyAction) {
+    void bindListeners(Runnable dirtyAction, Runnable methodChangeAction) {
         addDocumentListener(view.urlField.getDocument(), dirtyAction);
-        view.methodBox.addActionListener(e -> dirtyAction.run());
+        view.methodBox.addActionListener(e -> {
+            dirtyAction.run();
+            methodChangeAction.run();
+        });
         view.descriptionEditor.addDocumentListener(createDocumentListener(dirtyAction));
         view.headersPanel.addTableModelListener(e -> dirtyAction.run());
         view.pathVariablesPanel.addTableModelListener(e -> dirtyAction.run());
@@ -32,10 +35,14 @@ final class RequestTabStateController {
         view.authTabPanel.addDirtyListener(dirtyAction);
         view.requestSettingsPanel.addDirtyListener(dirtyAction);
 
-        if (protocol.isHttpProtocol()) {
+        if (protocol.supportsRequestBodyContent()) {
             if (view.requestBodyPanel.getBodyArea() != null) {
                 addDocumentListener(view.requestBodyPanel.getBodyArea().getDocument(), dirtyAction);
                 view.requestBodyPanel.getBodyArea().getDocument().addDocumentListener(createDocumentListener(this::updateTabIndicators));
+            }
+            if (view.requestBodyPanel.getBinaryFilePathField() != null) {
+                addDocumentListener(view.requestBodyPanel.getBinaryFilePathField().getDocument(), dirtyAction);
+                view.requestBodyPanel.getBinaryFilePathField().getDocument().addDocumentListener(createDocumentListener(this::updateTabIndicators));
             }
             if (view.requestBodyPanel.getFormDataTablePanel() != null) {
                 view.requestBodyPanel.getFormDataTablePanel().addTableModelListener(e -> dirtyAction.run());
@@ -90,7 +97,7 @@ final class RequestTabStateController {
                 .params(view.paramsPanel.getParamsListFromModel())
                 .headers(view.headersPanel.getHeadersListFromModel())
                 .bodyType(view.requestBodyPanel.getBodyType())
-                .body(view.requestBodyPanel.getRawBody())
+                .body(readBody())
                 .formData(readFormDataFromModel())
                 .urlencoded(readUrlencodedFromModel())
                 .authType(view.authTabPanel.getAuthType())
@@ -105,6 +112,7 @@ final class RequestTabStateController {
                 .proxyPolicy(settings.getProxyPolicy())
                 .httpVersion(settings.getHttpVersion())
                 .requestTimeoutMs(settings.getRequestTimeoutMs())
+                .webSocketPingIntervalMs(settings.getWebSocketPingIntervalMs())
                 .prescript(view.scriptPanel.getPrescript())
                 .postscript(view.scriptPanel.getPostscript())
                 .build();
@@ -113,6 +121,10 @@ final class RequestTabStateController {
     private List<HttpFormData> readFormDataFromModel() {
         FormDataTablePanel formDataPanel = view.requestBodyPanel.getFormDataTablePanel();
         return formDataPanel == null ? new ArrayList<>() : formDataPanel.getFormDataListFromModel();
+    }
+
+    private String readBody() {
+        return view.requestBodyPanel.getBodyContent(view.requestBodyPanel.getBodyType());
     }
 
     private List<HttpFormUrlencoded> readUrlencodedFromModel() {

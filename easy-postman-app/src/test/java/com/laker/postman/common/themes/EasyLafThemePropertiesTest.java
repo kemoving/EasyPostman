@@ -1,5 +1,7 @@
 package com.laker.postman.common.themes;
 
+import com.formdev.flatlaf.FlatClientProperties;
+import com.formdev.flatlaf.FlatLaf;
 import com.laker.postman.common.constants.ThemeColors;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -8,8 +10,13 @@ import org.testng.annotations.Test;
 import javax.swing.*;
 import java.awt.*;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -39,6 +46,23 @@ public class EasyLafThemePropertiesTest {
             "[style]Button.easyPostmanPrimary",
             "[style]Button.easyPostmanSecondary",
             "[style]ToggleButton.easyPostmanToggle"
+    );
+    private static final List<String> REQUIRED_DEFAULT_COMPONENT_FOCUS_KEYS = List.of(
+            "Component.focusColor",
+            "Component.focusedBorderColor",
+            "Component.focusWidth",
+            "Component.innerFocusWidth",
+            "Component.innerOutlineWidth"
+    );
+    private static final List<String> REQUIRED_DEFAULT_BUTTON_CHROME_KEYS = List.of(
+            "Button.borderWidth",
+            "Button.innerFocusWidth",
+            "Button.margin",
+            "Button.background",
+            "Button.borderColor",
+            "Button.hoverBorderColor",
+            "Button.pressedBorderColor",
+            "Button.focusedBorderColor"
     );
 
     private LookAndFeel previousLookAndFeel;
@@ -75,6 +99,39 @@ public class EasyLafThemePropertiesTest {
     }
 
     @Test
+    public void shouldApplyModernToggleStyleClassesWithoutFlatLafStylingErrors() {
+        assertTrue(EasyLightLaf.setup());
+        assertAppliesToggleStyleClassWithoutSevereLog("EasyLightLaf");
+
+        assertTrue(EasyDarkLaf.setup());
+        assertAppliesToggleStyleClassWithoutSevereLog("EasyDarkLaf");
+    }
+
+    @Test
+    public void shouldDefineCleanDefaultButtonChromeForBuiltInThemes() throws Exception {
+        assertDefinesDefaultButtonChrome("com/laker/postman/common/themes/EasyLightLaf.properties");
+        assertDefinesDefaultButtonChrome("com/laker/postman/common/themes/EasyDarkLaf.properties");
+    }
+
+    @Test
+    public void shouldAvoidDuplicatingToggleButtonBorderChromeDefaults() throws Exception {
+        assertAvoidsDuplicatedToggleButtonBorderChrome("com/laker/postman/common/themes/EasyLightLaf.properties");
+        assertAvoidsDuplicatedToggleButtonBorderChrome("com/laker/postman/common/themes/EasyDarkLaf.properties");
+    }
+
+    @Test
+    public void shouldAvoidUnsupportedButtonFocusWidthDefaults() throws Exception {
+        assertAvoidsUnsupportedButtonFocusWidthDefaults("com/laker/postman/common/themes/EasyLightLaf.properties");
+        assertAvoidsUnsupportedButtonFocusWidthDefaults("com/laker/postman/common/themes/EasyDarkLaf.properties");
+    }
+
+    @Test
+    public void shouldDefineQuietDefaultComponentFocusChromeForBuiltInThemes() throws Exception {
+        assertDefinesDefaultComponentFocusChrome("com/laker/postman/common/themes/EasyLightLaf.properties");
+        assertDefinesDefaultComponentFocusChrome("com/laker/postman/common/themes/EasyDarkLaf.properties");
+    }
+
+    @Test
     public void shouldExposeSemanticColorsThroughUiManagerAfterLafSetup() {
         assertTrue(EasyLightLaf.setup());
         assertThemeBrandColors(new Color(55, 113, 225), new Color(212, 227, 255));
@@ -89,6 +146,16 @@ public class EasyLafThemePropertiesTest {
                 new Color(242, 246, 255),
                 new Color(233, 234, 238)
         );
+        assertHttpSemanticColors(
+                new Color(0x2E7D32),
+                new Color(0xA16207),
+                new Color(0x1565C0),
+                new Color(0x00838F),
+                new Color(0xC62828),
+                new Color(0x475569),
+                new Color(0x00838F),
+                new Color(0x00796B)
+        );
 
         assertTrue(EasyDarkLaf.setup());
         assertThemeBrandColors(new Color(53, 116, 240), new Color(43, 67, 113));
@@ -102,6 +169,16 @@ public class EasyLafThemePropertiesTest {
                 new Color(43, 45, 48),
                 new Color(38, 40, 44),
                 new Color(43, 45, 48)
+        );
+        assertHttpSemanticColors(
+                new Color(0x6AAB73),
+                new Color(0xD5A945),
+                new Color(0x589DF6),
+                new Color(0x2AACB8),
+                new Color(0xF06A6A),
+                new Color(0x9AA0AA),
+                new Color(0x52C7D9),
+                new Color(0x4DB6AC)
         );
 
         assertNotNull(UIManager.getColor(ThemeColors.CONSOLE_SELECTION_BACKGROUND));
@@ -138,6 +215,24 @@ public class EasyLafThemePropertiesTest {
         assertReadableDisabledButtonContrast();
     }
 
+    @Test
+    public void defaultButtonsShouldUseSingleLineFocusChromeAfterLafSetup() {
+        assertTrue(EasyLightLaf.setup());
+        assertDefaultButtonChrome();
+
+        assertTrue(EasyDarkLaf.setup());
+        assertDefaultButtonChrome();
+    }
+
+    @Test
+    public void defaultComponentsShouldUseSingleLineFocusChromeAfterLafSetup() {
+        assertTrue(EasyLightLaf.setup());
+        assertDefaultComponentFocusChrome();
+
+        assertTrue(EasyDarkLaf.setup());
+        assertDefaultComponentFocusChrome();
+    }
+
     private void assertDefinesThemeColors(String resourcePath) throws Exception {
         Properties properties = loadProperties(resourcePath);
 
@@ -171,6 +266,86 @@ public class EasyLafThemePropertiesTest {
         }
     }
 
+    private void assertAppliesToggleStyleClassWithoutSevereLog(String themeName) {
+        Logger logger = Logger.getLogger(FlatLaf.class.getName());
+        List<LogRecord> severeRecords = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getLevel().intValue() >= Level.SEVERE.intValue()) {
+                    severeRecords.add(record);
+                }
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+
+        logger.addHandler(handler);
+        try {
+            JToggleButton button = new JToggleButton("Mode");
+            button.putClientProperty(FlatClientProperties.STYLE_CLASS, "easyPostmanToggle");
+            button.updateUI();
+        } finally {
+            logger.removeHandler(handler);
+        }
+
+        assertTrue(severeRecords.isEmpty(), themeName + " should apply easyPostmanToggle without FlatLaf styling errors");
+    }
+
+    private void assertDefinesDefaultComponentFocusChrome(String resourcePath) throws Exception {
+        Properties properties = loadProperties(resourcePath);
+
+        for (String key : REQUIRED_DEFAULT_COMPONENT_FOCUS_KEYS) {
+            assertTrue(properties.containsKey(key), resourcePath + " must define " + key);
+        }
+        assertEquals(properties.getProperty("Component.focusWidth"), "0",
+                resourcePath + " should avoid thick outer focus rings on text fields and combo boxes");
+        assertEquals(properties.getProperty("Component.innerFocusWidth"), "0",
+                resourcePath + " should keep default component focus chrome single-line");
+        assertEquals(properties.getProperty("Component.innerOutlineWidth"), "0",
+                resourcePath + " should keep warning/error outlines visually consistent");
+    }
+
+    private void assertDefinesDefaultButtonChrome(String resourcePath) throws Exception {
+        Properties properties = loadProperties(resourcePath);
+
+        for (String key : REQUIRED_DEFAULT_BUTTON_CHROME_KEYS) {
+            assertTrue(properties.containsKey(key), resourcePath + " must define " + key);
+        }
+        assertEquals(properties.getProperty("Button.innerFocusWidth"), "0",
+                resourcePath + " should keep plain JButton focus chrome single-line");
+        assertEquals(properties.getProperty("Button.borderWidth"), "1",
+                resourcePath + " should keep plain JButton borders quiet");
+        assertEquals(properties.getProperty("Button.margin"), "4,12,4,12",
+                resourcePath + " should keep plain JButton spacing consistent with shared secondary buttons");
+    }
+
+    private void assertAvoidsDuplicatedToggleButtonBorderChrome(String resourcePath) throws Exception {
+        Properties properties = loadProperties(resourcePath);
+
+        assertTrue(!properties.containsKey("ToggleButton.arc"),
+                resourcePath + " should let FlatButtonBorder use Button.arc for default toggle button corners");
+        assertTrue(!properties.containsKey("ToggleButton.borderWidth"),
+                resourcePath + " should let FlatButtonBorder use Button.borderWidth for default toggle button borders");
+    }
+
+    private void assertAvoidsUnsupportedButtonFocusWidthDefaults(String resourcePath) throws Exception {
+        Properties properties = loadProperties(resourcePath);
+
+        assertTrue(!properties.containsKey("Button.focusWidth"),
+                resourcePath + " should use Component.focusWidth for default button outer focus width");
+        assertTrue(!properties.containsKey("Button.default.focusWidth"),
+                resourcePath + " should not define unsupported default button focus width keys");
+        assertTrue(!properties.containsKey("Button.default.innerFocusWidth"),
+                resourcePath + " should use Button.innerFocusWidth for default button inner focus width");
+    }
+
     private void clearThemeAssertionKeys() {
         for (String key : REQUIRED_COMPONENT_SURFACE_KEYS) {
             UIManager.getDefaults().remove(key);
@@ -188,11 +363,25 @@ public class EasyLafThemePropertiesTest {
                 ThemeColors.TAB_SEPARATOR,
                 ThemeColors.PRIMARY,
                 ThemeColors.SELECTION_BACKGROUND,
+                ThemeColors.HTTP_METHOD_GET,
+                ThemeColors.HTTP_METHOD_POST,
+                ThemeColors.HTTP_METHOD_PUT,
+                ThemeColors.HTTP_METHOD_PATCH,
+                ThemeColors.HTTP_METHOD_DELETE,
+                ThemeColors.HTTP_METHOD_DEFAULT,
+                ThemeColors.HTTP_PROTOCOL_WS,
+                ThemeColors.HTTP_PROTOCOL_SSE,
                 ThemeColors.BUTTON_DISABLED_BACKGROUND,
                 ThemeColors.CONSOLE_SELECTION_BACKGROUND,
                 "Component.accentColor",
                 "Component.focusColor",
                 "Component.focusedBorderColor",
+                "Component.focusWidth",
+                "Component.innerFocusWidth",
+                "Component.innerOutlineWidth",
+                "Button.innerFocusWidth",
+                "Button.borderWidth",
+                "Button.focusedBorderColor",
                 "MenuBar.background",
                 "TitlePane.background",
                 "TitlePane.inactiveBackground",
@@ -239,6 +428,24 @@ public class EasyLafThemePropertiesTest {
         assertEquals(UIManager.getColor(ThemeColors.SELECTION_BACKGROUND), selectionBackground);
     }
 
+    private void assertHttpSemanticColors(Color get,
+                                          Color post,
+                                          Color put,
+                                          Color patch,
+                                          Color delete,
+                                          Color defaultColor,
+                                          Color ws,
+                                          Color sse) {
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_GET), get);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_POST), post);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_PUT), put);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_PATCH), patch);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_DELETE), delete);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_METHOD_DEFAULT), defaultColor);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_PROTOCOL_WS), ws);
+        assertEquals(UIManager.getColor(ThemeColors.HTTP_PROTOCOL_SSE), sse);
+    }
+
     private void assertComponentSurfaces(Color surface, Color tableHeaderBackground, Color tabSeparator) {
         for (String key : List.of(
                 "ToolBar.background",
@@ -278,6 +485,19 @@ public class EasyLafThemePropertiesTest {
 
         assertTrue(contrastRatio(background, foreground) >= 2.0,
                 "Disabled button background should not collapse into disabled text");
+    }
+
+    private void assertDefaultButtonChrome() {
+        assertEquals(UIManager.getInt("Button.innerFocusWidth"), 0);
+        assertEquals(UIManager.getInt("Button.borderWidth"), 1);
+        assertEquals(UIManager.getColor("Button.focusedBorderColor"), UIManager.getColor("Component.accentColor"));
+    }
+
+    private void assertDefaultComponentFocusChrome() {
+        assertEquals(UIManager.getInt("Component.focusWidth"), 0);
+        assertEquals(UIManager.getInt("Component.innerFocusWidth"), 0);
+        assertEquals(UIManager.getInt("Component.innerOutlineWidth"), 0);
+        assertEquals(UIManager.getColor("Component.focusedBorderColor"), UIManager.getColor("Component.accentColor"));
     }
 
     private double contrastRatio(Color first, Color second) {

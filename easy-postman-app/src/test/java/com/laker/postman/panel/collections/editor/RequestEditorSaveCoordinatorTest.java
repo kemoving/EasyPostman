@@ -1,7 +1,7 @@
 package com.laker.postman.panel.collections.editor;
 
 import com.laker.postman.collection.model.RequestGroup;
-import com.laker.postman.panel.collections.tree.CollectionGroupSelectionDialog;
+import com.laker.postman.panel.collections.tree.RequestNameSelection;
 import com.laker.postman.request.model.HttpRequestItem;
 import org.testng.annotations.Test;
 
@@ -21,12 +21,12 @@ public class RequestEditorSaveCoordinatorTest {
         RequestEditorSaveCoordinator coordinator = new RequestEditorSaveCoordinator();
         FakeSaveContext context = new FakeSaveContext();
         RequestGroup group = new RequestGroup("Group");
-        context.selectedRequest = new CollectionGroupSelectionDialog.RequestNameSelection(group, "Saved name");
+        context.selectedRequest = new RequestNameSelection(group, "Saved name");
 
         boolean saved = coordinator.saveCurrentRequest(context);
 
         assertTrue(saved);
-        assertTrue(context.promotedPreviewTab);
+        assertTrue(context.pinnedTransientTab);
         assertEquals(context.currentRequest.getName(), "Saved name");
         assertEquals(context.currentRequest.getId(), "generated-id");
         assertSame(context.savedGroup, group);
@@ -43,7 +43,7 @@ public class RequestEditorSaveCoordinatorTest {
         boolean saved = coordinator.saveCurrentRequest(context);
 
         assertFalse(saved);
-        assertTrue(context.promotedPreviewTab);
+        assertTrue(context.pinnedTransientTab);
         assertEquals(context.settingsValidationErrorShown, "bad timeout");
         assertFalse(context.newRequestDialogOpened);
         assertFalse(context.existingRequestUpdated);
@@ -57,7 +57,7 @@ public class RequestEditorSaveCoordinatorTest {
         boolean saved = coordinator.saveCurrentRequest(context);
 
         assertFalse(saved);
-        assertTrue(context.promotedPreviewTab);
+        assertTrue(context.pinnedTransientTab);
         assertTrue(context.newRequestDialogOpened);
         assertFalse(context.newRequestSaved);
         assertFalse(context.newRequestTabRefreshed);
@@ -83,11 +83,11 @@ public class RequestEditorSaveCoordinatorTest {
         private final HttpRequestItem currentRequest = new HttpRequestItem();
         private final TreeModel groupTreeModel = new DefaultTreeModel(null);
         private boolean savedResponseTab;
-        private boolean promotedPreviewTab;
+        private boolean pinnedTransientTab;
         private String validationError;
         private String settingsValidationErrorShown;
         private boolean newRequestDialogOpened;
-        private CollectionGroupSelectionDialog.RequestNameSelection selectedRequest;
+        private RequestNameSelection selectedRequest;
         private RequestGroup savedGroup;
         private HttpRequestItem savedRequest;
         private String refreshedTabName;
@@ -108,8 +108,8 @@ public class RequestEditorSaveCoordinatorTest {
         }
 
         @Override
-        public void promotePreviewTabToPermanent() {
-            promotedPreviewTab = true;
+        public void pinTransientTab() {
+            pinnedTransientTab = true;
         }
 
         @Override
@@ -137,7 +137,7 @@ public class RequestEditorSaveCoordinatorTest {
         }
 
         @Override
-        public Optional<CollectionGroupSelectionDialog.RequestNameSelection> chooseGroupAndRequestName(
+        public Optional<RequestNameSelection> chooseGroupAndRequestName(
                 TreeModel groupTreeModel,
                 String defaultName
         ) {

@@ -1,6 +1,7 @@
 package com.laker.postman.panel.sidebar;
 
 import com.laker.postman.common.component.ToolWindowStripeMetrics;
+import com.laker.postman.plugin.api.StatusBarActionContribution;
 import com.laker.postman.service.setting.SettingManager;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
@@ -12,6 +13,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 侧边栏底部操作区，只负责组件创建和状态刷新。
@@ -21,8 +25,10 @@ final class SidebarBottomBar {
     private static final String TOOLTIP_EXPAND_SIDEBAR = "Expand sidebar";
     private static final int BOTTOM_BAR_ICON_SIZE = 19;
     static final int BOTTOM_BAR_ACTION_SIZE = ToolWindowStripeMetrics.ACTION_SIZE;
+    private static final int BOTTOM_BAR_ACTION_WIDTH = 28;
     static final int STRIPE_THICKNESS = ToolWindowStripeMetrics.STRIPE_THICKNESS;
     private static final int BOTTOM_BAR_TEXT_VERTICAL_PADDING = 4;
+    private static final int WINDOW_EDGE_GAP = 8;
 
     private final JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     private final JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
@@ -38,8 +44,31 @@ final class SidebarBottomBar {
                      Runnable toggleLayoutOrientationAction,
                      Runnable openGlobalVariablesAction,
                      Runnable openCookieManagerAction) {
+        this(
+                sidebarExpanded,
+                toggleSidebarExpansionAction,
+                openConsoleAction,
+                toggleLayoutOrientationAction,
+                openGlobalVariablesAction,
+                openCookieManagerAction,
+                List.of(),
+                ignored -> {
+                }
+        );
+    }
+
+    SidebarBottomBar(boolean sidebarExpanded,
+                     Runnable toggleSidebarExpansionAction,
+                     Runnable openConsoleAction,
+                     Runnable toggleLayoutOrientationAction,
+                     Runnable openGlobalVariablesAction,
+                     Runnable openCookieManagerAction,
+                     List<StatusBarActionContribution> statusBarActions,
+                     Consumer<StatusBarActionContribution> statusBarActionHandler) {
         leftPanel.setOpaque(false);
         rightPanel.setOpaque(false);
+        leftPanel.setBorder(BorderFactory.createEmptyBorder(0, WINDOW_EDGE_GAP, 0, 0));
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, WINDOW_EDGE_GAP));
 
         sidebarToggleLabel = createActionLabel(
                 null,
@@ -71,12 +100,44 @@ final class SidebarBottomBar {
         leftPanel.add(sidebarToggleLabel);
         leftPanel.add(consoleLabel);
         rightPanel.add(versionLabel);
+        addStatusBarActions(statusBarActions, statusBarActionHandler);
         rightPanel.add(globalVariablesLabel);
         rightPanel.add(cookieLabel);
         rightPanel.add(layoutToggleLabel);
 
         setSidebarExpanded(sidebarExpanded);
         updateLayoutToggleState(SettingManager.isLayoutVertical());
+    }
+
+    private void addStatusBarActions(List<StatusBarActionContribution> statusBarActions,
+                                     Consumer<StatusBarActionContribution> statusBarActionHandler) {
+        if (statusBarActions == null || statusBarActions.isEmpty()) {
+            return;
+        }
+        statusBarActions.stream()
+                .filter(this::isValidStatusBarAction)
+                .sorted(Comparator
+                        .comparingInt(StatusBarActionContribution::order)
+                        .thenComparing(StatusBarActionContribution::id))
+                .forEach(contribution -> rightPanel.add(createActionLabel(
+                        contribution.tooltip(),
+                        IconUtil.createThemed(
+                                contribution.iconPath(),
+                                BOTTOM_BAR_ICON_SIZE,
+                                BOTTOM_BAR_ICON_SIZE,
+                                contribution.iconClassLoader()
+                        ),
+                        () -> statusBarActionHandler.accept(contribution)
+                )));
+    }
+
+    private boolean isValidStatusBarAction(StatusBarActionContribution contribution) {
+        return contribution != null
+                && !contribution.id().isBlank()
+                && !contribution.tooltip().isBlank()
+                && !contribution.iconPath().isBlank()
+                && !contribution.targetType().isBlank()
+                && !contribution.targetId().isBlank();
     }
 
     JPanel leftPanel() {
@@ -112,7 +173,7 @@ final class SidebarBottomBar {
         label.setVerticalAlignment(SwingConstants.CENTER);
         label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         label.setBorder(BorderFactory.createEmptyBorder());
-        Dimension size = ToolWindowStripeMetrics.actionSize();
+        Dimension size = bottomBarActionSize();
         label.setPreferredSize(size);
         label.setMinimumSize(size);
         label.setMaximumSize(size);
@@ -142,6 +203,10 @@ final class SidebarBottomBar {
                 8
         ));
         return versionLabel;
+    }
+
+    static Dimension bottomBarActionSize() {
+        return new Dimension(BOTTOM_BAR_ACTION_WIDTH, STRIPE_THICKNESS);
     }
 
     private Icon layoutToggleIcon(boolean isVertical) {

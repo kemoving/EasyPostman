@@ -330,6 +330,8 @@ public final class MessageKeys {
     public static final String REQUEST_VALIDATION_WEBSOCKET_PROTOCOL = "request.validation.websocket_protocol";
     public static final String REQUEST_VALIDATION_GET_BODY_CONFIRM = "request.validation.get_body.confirm";
     public static final String REQUEST_VALIDATION_GET_BODY_CONFIRM_TITLE = "request.validation.get_body.confirm_title";
+    public static final String REQUEST_VALIDATION_BINARY_FILE_REQUIRED = "request.validation.binary.file_required";
+    public static final String REQUEST_VALIDATION_BINARY_FILE_NOT_FOUND = "request.validation.binary.file_not_found";
     public static final String SELECT_GROUP = "select.group";
     public static final String PLEASE_ENTER_REQUEST_NAME = "please.enter.request.name";
     public static final String PLEASE_SELECT_GROUP = "please.select.group";
@@ -451,6 +453,9 @@ public final class MessageKeys {
     public static final String SSE_STREAM_CONNECTED = "sse.stream.connected";
     public static final String SSE_STREAM_CLOSED = "sse.stream.closed";
     public static final String SSE_STREAM_FAILED = "sse.stream.failed";
+    public static final String WEBSOCKET_STREAM_CONNECTED = "websocket.stream.connected";
+    public static final String WEBSOCKET_STREAM_CLOSED = "websocket.stream.closed";
+    public static final String STREAM_USER_CANCELED = "stream.user_canceled";
 
     // ============ 脚本相关 ============
     public static final String SCRIPT_BUTTON_SNIPPETS = "script.button.snippets";
@@ -1294,6 +1299,17 @@ public final class MessageKeys {
     public static final String REQUEST_SETTINGS_TIMEOUT_DESC = "request.settings.timeout.desc";
     public static final String REQUEST_SETTINGS_TIMEOUT_HINT = "request.settings.timeout.hint";
     public static final String REQUEST_SETTINGS_TIMEOUT_VALIDATION = "request.settings.timeout.validation";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_LABEL = "request.settings.websocket_ping.label";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_DESC = "request.settings.websocket_ping.desc";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_HINT = "request.settings.websocket_ping.hint";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_VALIDATION = "request.settings.websocket_ping.validation";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_DEFAULT = "request.settings.websocket_ping.default";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_DISABLED = "request.settings.websocket_ping.disabled";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_15S = "request.settings.websocket_ping.15s";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_30S = "request.settings.websocket_ping.30s";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_60S = "request.settings.websocket_ping.60s";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_CUSTOM = "request.settings.websocket_ping.custom";
+    public static final String REQUEST_SETTINGS_WEBSOCKET_PING_UNIT = "request.settings.websocket_ping.unit";
     public static final String REQUEST_SETTINGS_BOOLEAN_DEFAULT = "request.settings.boolean.default";
     public static final String REQUEST_SETTINGS_BOOLEAN_ENABLED = "request.settings.boolean.enabled";
     public static final String REQUEST_SETTINGS_BOOLEAN_DISABLED = "request.settings.boolean.disabled";
@@ -1395,6 +1411,13 @@ public final class MessageKeys {
     public static final String SETTINGS_DIALOG_SAVE = "settings.dialog.save";
     public static final String SETTINGS_DIALOG_CANCEL = "settings.dialog.cancel";
     public static final String SETTINGS_DIALOG_APPLY = "settings.dialog.apply";
+    public static final String SETTINGS_SEARCH_PLACEHOLDER = "settings.search.placeholder";
+    public static final String SETTINGS_SEARCH_NO_RESULTS = "settings.search.no_results";
+    public static final String SETTINGS_CATEGORY_APPLICATION = "settings.category.application";
+    public static final String SETTINGS_CATEGORY_NETWORK = "settings.category.network";
+    public static final String SETTINGS_CATEGORY_RUNTIME = "settings.category.runtime";
+    public static final String SETTINGS_CATEGORY_EXTENSIONS = "settings.category.extensions";
+    public static final String SETTINGS_CATEGORY_OTHER = "settings.category.other";
 
     // Unsaved changes warnings
     public static final String SETTINGS_UNSAVED_CHANGES_WARNING = "settings.unsaved_changes.warning";
@@ -1493,6 +1516,8 @@ public final class MessageKeys {
     public static final String SETTINGS_GENERAL_MAX_HISTORY_TOOLTIP = "settings.general.max_history.tooltip";
     public static final String SETTINGS_GENERAL_MAX_OPENED_REQUESTS = "settings.general.max_opened_requests";
     public static final String SETTINGS_GENERAL_MAX_OPENED_REQUESTS_TOOLTIP = "settings.general.max_opened_requests.tooltip";
+    public static final String SETTINGS_GENERAL_REQUEST_TABS_MULTILINE = "settings.general.request_tabs_multiline";
+    public static final String SETTINGS_GENERAL_REQUEST_TABS_MULTILINE_TOOLTIP = "settings.general.request_tabs_multiline.tooltip";
     public static final String SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD = "settings.git.diff.large_file_threshold";
     public static final String SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD_TOOLTIP = "settings.git.diff.large_file_threshold.tooltip";
     public static final String SETTINGS_GENERAL_AUTO_FORMAT_RESPONSE = "settings.general.auto_format_response";
@@ -1549,6 +1574,15 @@ public final class MessageKeys {
 
     // ============ 请求Body相关 ============
     public static final String REQUEST_BODY_NONE = "request.body.none";
+    public static final String REQUEST_BODY_BINARY_FILE = "request.body.binary.file";
+    public static final String REQUEST_BODY_BINARY_BROWSE = "request.body.binary.browse";
+    public static final String REQUEST_BODY_BINARY_SELECT_FILE = "request.body.binary.select_file";
+    public static final String REQUEST_BODY_BINARY_PLACEHOLDER = "request.body.binary.placeholder";
+    public static final String REQUEST_BODY_BINARY_CLEAR = "request.body.binary.clear";
+    public static final String REQUEST_BODY_BINARY_CLEAR_TOOLTIP = "request.body.binary.clear.tooltip";
+    public static final String REQUEST_BODY_BINARY_NO_FILE = "request.body.binary.no_file";
+    public static final String REQUEST_BODY_BINARY_FILE_SUMMARY = "request.body.binary.file_summary";
+    public static final String REQUEST_BODY_BINARY_FILE_MISSING = "request.body.binary.file_missing";
     public static final String REQUEST_BODY_FORMAT_ONLY_RAW = "request.body.format.only_raw";
     public static final String REQUEST_BODY_FORMAT_EMPTY = "request.body.format.empty";
     public static final String REQUEST_BODY_FORMAT_INVALID = "request.body.format.invalid";
@@ -1557,6 +1591,8 @@ public final class MessageKeys {
     public static final String REQUEST_BODY_COMPRESS_INVALID = "request.body.compress.invalid";
 
     // ============ 响应头面板相关 ============
+    public static final String RESPONSE_HEADERS_COLUMN_NAME = "response.headers.column.name";
+    public static final String RESPONSE_HEADERS_COLUMN_VALUE = "response.headers.column.value";
     public static final String RESPONSE_HEADERS_COPY_SELECTED = "response.headers.copy_selected";
     public static final String RESPONSE_HEADERS_COPY_CELL = "response.headers.copy_cell";
     public static final String RESPONSE_HEADERS_COPY_ALL = "response.headers.copy_all";
@@ -1598,9 +1634,11 @@ public final class MessageKeys {
     public static final String CSV_DATA_CLEARED = "csv.data.cleared";
     public static final String CSV_DIALOG_MANAGEMENT_TITLE = "csv.dialog.management.title";
     public static final String CSV_DATA_DRIVEN_TEST = "csv.data_driven_test";
+    public static final String CSV_DIALOG_SUMMARY = "csv.dialog.summary";
     public static final String CSV_DIALOG_DESCRIPTION = "csv.dialog.description";
     public static final String CSV_CURRENT_STATUS = "csv.current_status";
     public static final String CSV_OPERATIONS = "csv.operations";
+    public static final String CSV_ACTION_REQUIRES_DATA = "csv.action.requires_data";
     public static final String CSV_BUTTON_SELECT_FILE = "csv.button.select_file";
     public static final String CSV_BUTTON_MANAGE_DATA = "csv.button.manage_data";
     public static final String CSV_BUTTON_CLEAR_DATA = "csv.button.clear_data";
@@ -1620,6 +1658,7 @@ public final class MessageKeys {
     public static final String CSV_CANNOT_DELETE_ALL_COLUMNS = "csv.cannot_delete_all_columns";
     public static final String CSV_CONFIRM_DELETE_COLUMNS = "csv.confirm_delete_columns";
     public static final String CSV_USAGE_INSTRUCTIONS = "csv.usage_instructions";
+    public static final String CSV_USAGE_SUMMARY = "csv.usage_summary";
     public static final String CSV_USAGE_TEXT = "csv.usage_text";
     public static final String CSV_NO_VALID_DATA_ROWS = "csv.no_valid_data_rows";
     public static final String CSV_DATA_SAVED = "csv.data_saved";
@@ -1635,7 +1674,10 @@ public final class MessageKeys {
     public static final String CSV_CREATE_MANUAL_DIALOG_TITLE = "csv.create_manual.dialog_title";
     public static final String CSV_CREATE_MANUAL_DESCRIPTION = "csv.create_manual.description";
     public static final String CSV_CREATE_MANUAL_COLUMN_HEADERS = "csv.create_manual.column_headers";
+    public static final String CSV_CREATE_MANUAL_EXAMPLE = "csv.create_manual.example";
+    public static final String CSV_CREATE_MANUAL_PREVIEW = "csv.create_manual.preview";
     public static final String CSV_CREATE_MANUAL_HEADERS_REQUIRED = "csv.create_manual.headers_required";
+    public static final String CSV_CREATE_MANUAL_DUPLICATE_HEADER = "csv.create_manual.duplicate_header";
     public static final String CSV_CREATE_MANUAL_TOO_MANY_COLUMNS = "csv.create_manual.too_many_columns";
     public static final String CSV_BULK_EDIT = "csv.bulk_edit";
     public static final String CSV_BULK_EDIT_HINT = "csv.bulk_edit.hint";
@@ -1918,6 +1960,7 @@ public final class MessageKeys {
     // ============ WebSocket面板相关 ============
     public static final String WEBSOCKET_COLUMN_TYPE = "websocket.column.type";
     public static final String WEBSOCKET_COLUMN_TIME = "websocket.column.time";
+    public static final String STREAM_COLUMN_INTERVAL = "stream.column.interval";
     public static final String WEBSOCKET_COLUMN_CONTENT = "websocket.column.content";
     public static final String WEBSOCKET_TYPE_ALL = "websocket.type.all";
     public static final String WEBSOCKET_TYPE_SENT = "websocket.type.sent";
@@ -1927,6 +1970,13 @@ public final class MessageKeys {
     public static final String WEBSOCKET_TYPE_WARNING = "websocket.type.warning";
     public static final String WEBSOCKET_TYPE_INFO = "websocket.type.info";
     public static final String WEBSOCKET_TYPE_BINARY = "websocket.type.binary";
+    public static final String STREAM_FILTER_MESSAGES = "stream.filter.messages";
+    public static final String STREAM_FILTER_STATUS = "stream.filter.status";
+    public static final String STREAM_DETAIL_SOURCE = "stream.detail.source";
+    public static final String STREAM_SOURCE_SERVER = "stream.source.server";
+    public static final String STREAM_SOURCE_CLIENT = "stream.source.client";
+    public static final String STREAM_SOURCE_STATUS = "stream.source.status";
+    public static final String STREAM_TOOLTIP_OPEN_DETAIL = "stream.tooltip.open_detail";
     public static final String STREAM_ASSERTION_TOOLTIP = "stream.assertion.tooltip";
     public static final String STREAM_ASSERTION_DETAILS_TITLE = "stream.assertion.details.title";
     public static final String STREAM_ASSERTION_DETAILS_META = "stream.assertion.details.meta";
@@ -1997,6 +2047,10 @@ public final class MessageKeys {
     public static final String WATERFALL_STAGE_WAITING = "waterfall.stage.waiting";
     public static final String WATERFALL_STAGE_CONTENT_DOWNLOAD = "waterfall.stage.content_download";
     public static final String WATERFALL_STAGE_DURATION = "waterfall.stage.duration";
+    public static final String WATERFALL_STAGE_DURATION_SUB_MILLISECOND = "waterfall.stage.duration.sub_millisecond";
+    public static final String WATERFALL_STAGE_DURATION_NOT_RECORDED = "waterfall.stage.duration.not_recorded";
+    public static final String WATERFALL_STAGE_DURATION_SUB_MILLISECOND_NOTE = "waterfall.stage.duration.sub_millisecond_note";
+    public static final String WATERFALL_STAGE_DURATION_NOT_RECORDED_NOTE = "waterfall.stage.duration.not_recorded_note";
     public static final String WATERFALL_STAGE_DESC_DNS = "waterfall.stage.desc.dns";
     public static final String WATERFALL_STAGE_DESC_SOCKET = "waterfall.stage.desc.socket";
     public static final String WATERFALL_STAGE_DESC_SSL = "waterfall.stage.desc.ssl";
@@ -2243,6 +2297,8 @@ public final class MessageKeys {
     public static final String SETTINGS_PROXY_MODE_TOOLTIP = "settings.proxy.mode.tooltip";
     public static final String SETTINGS_PROXY_MODE_MANUAL = "settings.proxy.mode.manual";
     public static final String SETTINGS_PROXY_MODE_SYSTEM = "settings.proxy.mode.system";
+    public static final String SETTINGS_PROXY_MANUAL_SECTION_TITLE = "settings.proxy.manual_section.title";
+    public static final String SETTINGS_PROXY_MANUAL_SECTION_DESCRIPTION = "settings.proxy.manual_section.description";
     public static final String SETTINGS_PROXY_TYPE = "settings.proxy.type";
     public static final String SETTINGS_PROXY_TYPE_TOOLTIP = "settings.proxy.type.tooltip";
     public static final String SETTINGS_PROXY_TYPE_HTTP = "settings.proxy.type.http";
@@ -2256,8 +2312,14 @@ public final class MessageKeys {
     public static final String SETTINGS_PROXY_PASSWORD = "settings.proxy.password";
     public static final String SETTINGS_PROXY_PASSWORD_TOOLTIP = "settings.proxy.password.tooltip";
     public static final String SETTINGS_PROXY_SYSTEM_AUTH_HINT = "settings.proxy.system_auth_hint";
+    public static final String SETTINGS_PROXY_AUTH_SECTION_TITLE = "settings.proxy.auth_section.title";
+    public static final String SETTINGS_PROXY_AUTH_SECTION_DESCRIPTION = "settings.proxy.auth_section.description";
+    public static final String SETTINGS_PROXY_ADVANCED_SECTION_TITLE = "settings.proxy.advanced_section.title";
+    public static final String SETTINGS_PROXY_ADVANCED_SECTION_DESCRIPTION = "settings.proxy.advanced_section.description";
     public static final String SETTINGS_PROXY_SSL_VERIFICATION_TOOLTIP = "settings.proxy.ssl.verification.tooltip";
     public static final String SETTINGS_PROXY_SSL_VERIFICATION_CHECKBOX = "settings.proxy.ssl.verification.checkbox";
+    public static final String SETTINGS_PROXY_PREVIEW_SECTION_TITLE = "settings.proxy.preview_section.title";
+    public static final String SETTINGS_PROXY_PREVIEW_SECTION_DESCRIPTION = "settings.proxy.preview_section.description";
     public static final String SETTINGS_PROXY_PREVIEW_TARGET = "settings.proxy.preview.target";
     public static final String SETTINGS_PROXY_PREVIEW_TARGET_TOOLTIP = "settings.proxy.preview.target.tooltip";
     public static final String SETTINGS_PROXY_STATUS_DISABLED = "settings.proxy.status.disabled";

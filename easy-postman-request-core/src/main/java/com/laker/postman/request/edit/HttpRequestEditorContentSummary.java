@@ -62,7 +62,7 @@ public class HttpRequestEditorContentSummary {
 
     private static boolean hasBody(HttpRequestEditorDraft draft) {
         RequestItemProtocolEnum protocol = draft.getProtocol();
-        if (protocol != null && !protocol.isHttpProtocol()) {
+        if (protocol != null && !protocol.supportsRequestBodyContent()) {
             return false;
         }
 
@@ -98,7 +98,8 @@ public class HttpRequestEditorContentSummary {
                 || Boolean.FALSE.equals(draft.getCookieJarEnabled())
                 || HttpRequestProxyPolicy.DEFAULT != HttpRequestProxyPolicy.normalize(draft.getProxyPolicy())
                 || !HttpRequestVersions.AUTO.equals(normalizeHttpVersion(draft.getHttpVersion()))
-                || draft.getRequestTimeoutMs() != null;
+                || draft.getRequestTimeoutMs() != null
+                || draft.getWebSocketPingIntervalMs() != null;
     }
 
     private static boolean hasScripts(HttpRequestEditorDraft draft) {

@@ -1,5 +1,6 @@
 package com.laker.postman.plugin.capture;
 
+import com.laker.postman.plugin.api.PluginStorage;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -10,6 +11,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 final class CaptureProxyService {
     private final CaptureSessionStore sessionStore = new CaptureSessionStore();
     private final SystemProxyService systemProxyService = new SystemProxyService();
+    private final CaptureSourceAppResolver sourceAppResolver = new CaptureSourceAppResolver();
     private volatile CaptureCertificateService certificateService;
 
     private volatile EventLoopGroup bossGroup;
@@ -18,10 +20,18 @@ final class CaptureProxyService {
     private volatile String listenHost = "127.0.0.1";
     private volatile int listenPort = 8888;
     private volatile boolean syncSystemProxy;
-    private volatile CaptureRequestFilter captureRequestFilter = CaptureRequestFilter.parse("");
+    private final CaptureFilterState captureFilterState = new CaptureFilterState();
 
     CaptureSessionStore sessionStore() {
         return sessionStore;
+    }
+
+    void configureStorage(PluginStorage storage) {
+        systemProxyService.configureStorage(storage);
+    }
+
+    SystemProxyService.SystemProxyRecoveryResult restoreLingeringSystemProxy() throws Exception {
+        return systemProxyService.restorePersistedSnapshotIfOwned();
     }
 
     synchronized void start(String host, int port, boolean syncSystemProxy, String captureHostFilterText) throws Exception {
@@ -31,7 +41,7 @@ final class CaptureProxyService {
         listenHost = host;
         listenPort = port;
         this.syncSystemProxy = syncSystemProxy;
-        captureRequestFilter = CaptureRequestFilter.parse(captureHostFilterText);
+        captureFilterState.update(captureHostFilterText);
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
         try {
@@ -40,7 +50,7 @@ final class CaptureProxyService {
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, 128)
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
-                    .childHandler(new CaptureServerInitializer(sessionStore, certificateService(), captureRequestFilter));
+                    .childHandler(new CaptureServerInitializer(sessionStore, certificateService(), captureFilterState, sourceAppResolver));
             serverChannel = bootstrap.bind(listenHost, listenPort).sync().channel();
             if (syncSystemProxy) {
                 systemProxyService.enable(listenHost, listenPort);
@@ -114,7 +124,11 @@ final class CaptureProxyService {
     }
 
     String captureFilterSummary() {
-        return captureRequestFilter.summary();
+        return captureFilterState.summary();
+    }
+
+    void updateCaptureFilter(String rawValue) {
+        captureFilterState.update(rawValue);
     }
 
     private CaptureCertificateService certificateService() {
