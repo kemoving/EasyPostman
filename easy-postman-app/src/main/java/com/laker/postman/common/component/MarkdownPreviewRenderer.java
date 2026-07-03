@@ -19,6 +19,8 @@ public class MarkdownPreviewRenderer {
     
     // 缓存完整的样式字符串，避免重复拼接
     private static volatile String CACHED_STYLES;
+    // 缓存时的主题ID，用于检测主题切换
+    private static volatile String CACHED_THEME_ID;
 
     /**
      * 获取 Parser 实例（懒加载 + 双重检查锁定）
@@ -196,14 +198,20 @@ public class MarkdownPreviewRenderer {
     public static String wrapWithTheme(String bodyHtml) {
         String bg = toHex(ModernColors.getCardBackgroundColor());
         String fg = toHex(ModernColors.getTextPrimary());
+        String linkColor = toHex(ModernColors.getAccent());
+        String selectionBg = toHex(ModernColors.getSelectionBackgroundColor());
         
-        // 使用缓存的样式字符串（如果已缓存）
+        // 使用缓存的样式字符串（如果已缓存且主题未变化）
         String styles = getCachedStyles();
 
         return "<!DOCTYPE html>"
             + "<html><head><meta charset='UTF-8'><style>"
-            + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-            + "font-size:10px;line-height:1.6;color:" + fg + ";background:" + bg + ";margin:8px}"
+            + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;"
+            + "font-size:12px;line-height:1.7;color:" + fg + ";background:" + bg + ";margin:12px 16px;word-wrap:break-word}"
+            + "a{color:" + linkColor + ";text-decoration:none;border-bottom:1px solid rgba(127,190,214,0.4)}"
+            + "a:hover{border-bottom-color:" + linkColor + ";text-decoration:underline}"
+            + "::selection{background:" + selectionBg + ";color:" + fg + "}"
+            + "img{max-width:100%;height:auto;border-radius:4px;margin:4px 0}"
             + styles
             + "</style></head><body>"
             + bodyHtml
@@ -212,11 +220,13 @@ public class MarkdownPreviewRenderer {
     
     /**
      * 获取缓存的样式字符串（避免重复拼接）
+     * 主题切换时自动失效缓存并重新生成
      */
     private static String getCachedStyles() {
-        if (CACHED_STYLES == null) {
+        String currentThemeId = ModernColors.isDarkTheme() ? "dark" : "light";
+        if (CACHED_STYLES == null || !java.util.Objects.equals(currentThemeId, CACHED_THEME_ID)) {
             synchronized (MarkdownPreviewRenderer.class) {
-                if (CACHED_STYLES == null) {
+                if (CACHED_STYLES == null || !java.util.Objects.equals(currentThemeId, CACHED_THEME_ID)) {
                     StringBuilder sb = new StringBuilder(1024);
                     sb.append("table{").append(getTableStyle()).append("}");
                     sb.append(getTableRowHoverStyle());
@@ -230,9 +240,12 @@ public class MarkdownPreviewRenderer {
                     for (int i = 1; i <= 6; i++) {
                         sb.append("h").append(i).append("{").append(getHeadingStyle(i)).append("}");
                     }
-                    sb.append("p{margin:0 0 6px 0;}");
+                    sb.append("p{margin:0 0 8px 0;}");
                     sb.append("br{margin:4px 0;}");
+                    sb.append("ul,ol{margin:0 0 8px 0;padding-left:20px;}");
+                    sb.append("li{margin:2px 0;}");
                     CACHED_STYLES = sb.toString();
+                    CACHED_THEME_ID = currentThemeId;
                 }
             }
         }
