@@ -1,6 +1,6 @@
 {
   "name": "EasyPostman Official Plugin Catalog (Gitee)",
-  "generatedAt": "2026-06-11T09:11:11Z",
+  "generatedAt": "2026-06-23T02:20:08Z",
   "plugins": [
     {
       "id": "plugin-capture",
@@ -8,6 +8,14 @@
       "description": "HTTP capture toolbox panel with a local explicit proxy.",
       "homepage": "https://gitee.com/lakernote/easy-postman",
       "releases": [
+        {
+          "version": "6.0.8",
+          "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-capture-v6.0.8/easy-postman-6.0.8-plugin-capture.jar",
+          "sha256": "64e01580e8f3d9051d78866576b39f63e009b2d72f3a0db7e6376a023c772bfe",
+          "minAppVersion": "6.0.7",
+          "minPlatformVersion": "4.0.0",
+          "maxPlatformVersion": "4.0.0"
+        },
         {
           "version": "6.0.3",
           "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-capture-v6.0.3/easy-postman-6.0.3-plugin-capture.jar",
@@ -41,6 +49,14 @@
       "homepage": "https://gitee.com/lakernote/easy-postman",
       "releases": [
         {
+          "version": "6.0.8",
+          "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-client-cert-v6.0.8/easy-postman-6.0.8-plugin-client-cert.jar",
+          "sha256": "b103e57d855c54f0dd7ea62d633c05734baf1bd9e3e7b4ef5bde31b94c40e03e",
+          "minAppVersion": "6.0.7",
+          "minPlatformVersion": "4.0.0",
+          "maxPlatformVersion": "4.0.0"
+        },
+        {
           "version": "6.0.3",
           "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-client-cert-v6.0.3/easy-postman-6.0.3-plugin-client-cert.jar",
           "sha256": "0a5fcf64f3b0785d4f489b289904e4a8a5b48033167120c49d4449e46a731abd",
@@ -73,6 +89,14 @@
       "homepage": "https://gitee.com/lakernote/easy-postman",
       "releases": [
         {
+          "version": "6.0.8",
+          "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-decompiler-v6.0.8/easy-postman-6.0.8-plugin-decompiler.jar",
+          "sha256": "1b1e459e5cb0d8771c3aa02faf206e6ba00d826b43b53666dc96b7fc71113c12",
+          "minAppVersion": "6.0.7",
+          "minPlatformVersion": "4.0.0",
+          "maxPlatformVersion": "4.0.0"
+        },
+        {
           "version": "6.0.3",
           "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-decompiler-v6.0.3/easy-postman-6.0.3-plugin-decompiler.jar",
           "sha256": "3e6774ec65a9447813a53079da45fed86ed932e7a26c42264fdc9a106faf6f43",
@@ -104,6 +128,14 @@
       "description": "Kafka toolbox panel, pm.plugin(\"kafka\") script API, completions and snippets.",
       "homepage": "https://gitee.com/lakernote/easy-postman",
       "releases": [
+        {
+          "version": "6.0.8",
+          "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-kafka-v6.0.8/easy-postman-6.0.8-plugin-kafka.jar",
+          "sha256": "983c582e3288188c71a281e195deac63975bd1653fb8bb3fea357a1862e076b9",
+          "minAppVersion": "6.0.7",
+          "minPlatformVersion": "4.0.0",
+          "maxPlatformVersion": "4.0.0"
+        },
         {
           "version": "6.0.3",
           "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-kafka-v6.0.3/easy-postman-6.0.3-plugin-kafka.jar",
@@ -152,6 +184,14 @@
       "description": "Redis toolbox panel, pm.plugin(\"redis\") script API, completions and snippets.",
       "homepage": "https://gitee.com/lakernote/easy-postman",
       "releases": [
+        {
+          "version": "6.0.8",
+          "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-redis-v6.0.8/easy-postman-6.0.8-plugin-redis.jar",
+          "sha256": "531d479486f3a64fe222a5bb1c86c78d70fab0ea842070e0eafea97c9752feb7",
+          "minAppVersion": "6.0.7",
+          "minPlatformVersion": "4.0.0",
+          "maxPlatformVersion": "4.0.0"
+        },
         {
           "version": "6.0.3",
           "downloadUrl": "https://gitee.com/lakernote/easy-postman/releases/download/plugin-redis-v6.0.3/easy-postman-6.0.3-plugin-redis.jar",

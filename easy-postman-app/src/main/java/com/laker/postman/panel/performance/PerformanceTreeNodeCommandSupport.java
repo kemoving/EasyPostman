@@ -7,12 +7,13 @@ import com.laker.postman.request.model.HttpRequestItem;
 import com.laker.postman.performance.core.model.NodeType;
 
 
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.panel.collections.RequestSelectionDialogSupport;
 import com.laker.postman.performance.model.PerformanceTreeNode;
 import com.laker.postman.panel.performance.tree.PerformanceTreeNodeFactory;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.RequiredArgsConstructor;
 
 import javax.swing.AbstractAction;
@@ -128,21 +129,20 @@ final class PerformanceTreeNodeCommandSupport {
                 if (!(userObj instanceof PerformanceTreeNode nodeData) || !commandPolicy().canRename(node)) {
                     return;
                 }
-                String oldName = nodeData.name;
-                String newName = JOptionPane.showInputDialog(
+                TextInputDialog.showRequiredName(
                         parentComponent,
-                        I18nUtil.getMessage(MessageKeys.PERFORMANCE_MSG_RENAME_NODE),
-                        oldName
-                );
-                if (newName != null && !newName.trim().isEmpty()) {
-                    nodeData.name = newName.trim();
+                        I18nUtil.getMessage(MessageKeys.PERFORMANCE_MENU_RENAME),
+                        nodeData.name,
+                        I18nUtil.getMessage(MessageKeys.PERFORMANCE_NODE_NAME_EMPTY)
+                ).ifPresent(newName -> {
+                    nodeData.name = newName;
                     if (nodeData.type == NodeType.REQUEST && nodeData.httpRequestItem != null) {
-                        nodeData.httpRequestItem.setName(newName.trim());
+                        nodeData.httpRequestItem.setName(newName);
                         switchRequestEditorAction.accept(nodeData.httpRequestItem);
                     }
                     treeModel.nodeChanged(node);
                     saveConfigAction.run();
-                }
+                });
             }
         };
     }
@@ -257,7 +257,7 @@ final class PerformanceTreeNodeCommandSupport {
                 .toList();
 
         if (supportedList.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.MSG_ONLY_HTTP_SSE_WS_SUPPORTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.MSG_ONLY_HTTP_SSE_WS_SUPPORTED));
             return;
         }
 

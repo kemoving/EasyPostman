@@ -2,6 +2,7 @@ package com.laker.postman.panel.collections.editor.request;
 
 import com.laker.postman.http.runtime.model.HttpResponse;
 import com.laker.postman.http.runtime.model.PreparedRequest;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.request.model.HttpRequestItem;
 import com.laker.postman.request.model.SavedResponse;
 import com.laker.postman.panel.collections.editor.CollectionTreeEditorGateway;
@@ -10,7 +11,7 @@ import com.laker.postman.panel.collections.editor.request.sub.ResponsePanel;
 import com.laker.postman.service.collections.SavedResponseSnapshotMapper;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,15 +31,12 @@ final class SavedResponseUiController {
 
     String promptResponseName(Component owner) {
         String defaultName = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        return (String) JOptionPane.showInputDialog(
+        return TextInputDialog.showRequiredName(
                 owner,
-                I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_DIALOG_MESSAGE),
                 I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_DIALOG_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                defaultName
-        );
+                defaultName,
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_EMPTY)
+        ).orElse(null);
     }
 
     void saveResponse(String name,
@@ -50,14 +48,14 @@ final class SavedResponseUiController {
 
             if (!collectionTreeGateway.saveResponseForRequest(originalRequestItem, savedResponse)) {
                 log.warn("无法找到请求节点，保存响应失败");
-                NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_REQUEST_NOT_FOUND));
+                NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_REQUEST_NOT_FOUND));
                 return;
             }
 
-            NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_SUCCESS, name));
+            NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_SUCCESS, name));
         } catch (Exception ex) {
             log.error("保存响应失败", ex);
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_ERROR, ex.getMessage()));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.RESPONSE_SAVE_ERROR, ex.getMessage()));
         }
     }
 

@@ -16,6 +16,7 @@ public final class AppToolWindowChrome {
     public static final int DIVIDER_SIZE = ToolWindowChrome.DRAG_GAP_DIVIDER_SIZE;
     private static final ToolWindowChrome.SplitDividerStyle HOST_SPLIT_STYLE =
             ToolWindowChrome.SplitDividerStyle.DRAG_GAP;
+    public static final int STACKED_DIVIDER_SIZE = ToolWindowChrome.stackedDividerSize(HOST_SPLIT_STYLE);
 
     private AppToolWindowChrome() {
     }
@@ -56,8 +57,18 @@ public final class AppToolWindowChrome {
         return ToolWindowChrome.createHorizontalInnerSplitPane(left, right, dividerLocation, HOST_SPLIT_STYLE);
     }
 
+    public static JSplitPane createHorizontalInvisibleInnerSplitPane(Component left, Component right,
+                                                                    int dividerLocation) {
+        return ToolWindowChrome.createHorizontalInvisibleInnerSplitPane(left, right, dividerLocation);
+    }
+
     public static JSplitPane createVerticalInnerSplitPane(Component top, Component bottom, int dividerLocation) {
         return ToolWindowChrome.createVerticalInnerSplitPane(top, bottom, dividerLocation, HOST_SPLIT_STYLE);
+    }
+
+    public static JSplitPane createVerticalInvisibleInnerSplitPane(Component top, Component bottom,
+                                                                  int dividerLocation) {
+        return ToolWindowChrome.createVerticalInvisibleInnerSplitPane(top, bottom, dividerLocation);
     }
 
     public static JSplitPane createHorizontalCardSplitPane(Component leftContent, Component rightContent,

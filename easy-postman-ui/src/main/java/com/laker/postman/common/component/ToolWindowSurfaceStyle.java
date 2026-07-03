@@ -39,9 +39,11 @@ import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeListener;
 import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
@@ -98,6 +100,11 @@ public final class ToolWindowSurfaceStyle {
         setCard(component, true);
         component.setBorder(BorderFactory.createEmptyBorder(top, left, bottom, right));
         installThemeRefresh(component, ToolWindowSurfaceStyle::setOpaqueCard);
+    }
+
+    public static void applyToolWindowToolbarSeparator(JComponent component, int top, int left, int bottom, int right) {
+        setToolWindowToolbarSeparator(component, top, left, bottom, right);
+        installThemeRefresh(component, target -> setToolWindowToolbarSeparator(target, top, left, bottom, right));
     }
 
     public static void applySectionCard(JComponent component) {
@@ -459,6 +466,14 @@ public final class ToolWindowSurfaceStyle {
         ));
     }
 
+    private static void setToolWindowToolbarSeparator(JComponent component, int top, int left, int bottom, int right) {
+        setCard(component, true);
+        component.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, ModernColors.getTabSeparatorColor()),
+                BorderFactory.createEmptyBorder(top, left, bottom, right)
+        ));
+    }
+
     private static void setDialogSurface(JComponent component) {
         setDialogChromeBackground(component, true);
     }
@@ -707,14 +722,14 @@ public final class ToolWindowSurfaceStyle {
     private static void installThemeRefresh(JComponent component, Consumer<JComponent> updater) {
         Object previous = component.getClientProperty(THEME_REFRESH_LISTENER);
         if (previous instanceof ThemeRefreshRegistration registration) {
-            component.removePropertyChangeListener("UI", registration.componentListener());
-            UIManager.removePropertyChangeListener(registration.lookAndFeelListener());
+            registration.uninstall(component);
         }
         PropertyChangeListener componentListener = event -> {
             if ("UI".equals(event.getPropertyName())) {
                 scheduleRefresh(component, updater);
             }
         };
+        AtomicReference<ThemeRefreshRegistration> registrationRef = new AtomicReference<>();
         PropertyChangeListener lookAndFeelListener = new PropertyChangeListener() {
             private final WeakReference<JComponent> componentRef = new WeakReference<>(component);
 
@@ -731,9 +746,22 @@ public final class ToolWindowSurfaceStyle {
                 scheduleRefresh(target, updater);
             }
         };
-        component.putClientProperty(THEME_REFRESH_LISTENER,
-                new ThemeRefreshRegistration(componentListener, lookAndFeelListener));
+        HierarchyListener hierarchyListener = event -> {
+            if ((event.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) == 0 || component.isDisplayable()) {
+                return;
+            }
+            ThemeRefreshRegistration registration = registrationRef.get();
+            if (registration != null) {
+                scheduleThemeRefreshCleanup(component, registration);
+            }
+        };
+
+        ThemeRefreshRegistration registration =
+                new ThemeRefreshRegistration(componentListener, lookAndFeelListener, hierarchyListener);
+        registrationRef.set(registration);
+        component.putClientProperty(THEME_REFRESH_LISTENER, registration);
         component.addPropertyChangeListener("UI", componentListener);
+        component.addHierarchyListener(hierarchyListener);
         UIManager.addPropertyChangeListener(lookAndFeelListener);
     }
 
@@ -745,8 +773,24 @@ public final class ToolWindowSurfaceStyle {
         SwingUtilities.invokeLater(() -> updater.accept(component));
     }
 
+    private static void scheduleThemeRefreshCleanup(JComponent component, ThemeRefreshRegistration registration) {
+        SwingUtilities.invokeLater(() -> {
+            if (component.isDisplayable() || component.getClientProperty(THEME_REFRESH_LISTENER) != registration) {
+                return;
+            }
+            registration.uninstall(component);
+            component.putClientProperty(THEME_REFRESH_LISTENER, null);
+        });
+    }
+
     private record ThemeRefreshRegistration(PropertyChangeListener componentListener,
-                                            PropertyChangeListener lookAndFeelListener) {
+                                            PropertyChangeListener lookAndFeelListener,
+                                            HierarchyListener hierarchyListener) {
+        private void uninstall(JComponent component) {
+            component.removePropertyChangeListener("UI", componentListener);
+            component.removeHierarchyListener(hierarchyListener);
+            UIManager.removePropertyChangeListener(lookAndFeelListener);
+        }
     }
 
     private enum ScrollPaneCardVariant {

@@ -1,5 +1,7 @@
 package com.laker.postman.panel.collections.editor.request;
 
+import com.laker.postman.http.runtime.model.HttpCaptureProfile;
+import com.laker.postman.http.runtime.model.HttpCaptureProfiles;
 import com.laker.postman.http.runtime.model.HttpResponse;
 import com.laker.postman.stream.MessageType;
 import com.laker.postman.http.runtime.model.PreparedRequest;
@@ -14,7 +16,7 @@ import com.laker.postman.http.runtime.sse.SseStreamCallback;
 import com.laker.postman.service.js.ScriptExecutionPipeline;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,10 +35,7 @@ final class SseRequestExecutor {
     private final HttpTransport httpTransport = new DefaultHttpTransport();
 
     SwingWorker<Void, Void> createWorker(PreparedRequest req, ScriptExecutionPipeline pipeline) {
-        req.collectBasicInfo = true;
-        req.collectMetricsInfo = true;
-        req.collectEventInfo = true;
-        req.enableNetworkLog = true;
+        HttpCaptureProfiles.apply(req, HttpCaptureProfile.COLLECTION_DIAGNOSTIC);
         return new SwingWorker<>() {
             HttpResponse resp;
             StringBuilder sseBodyBuilder;
@@ -108,7 +107,7 @@ final class SseRequestExecutor {
                                 if (executionState.isDisposed()) {
                                     return;
                                 }
-                                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SSE_FAILED, errorMsg));
+                                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SSE_FAILED, errorMsg));
                                 requestExecutionUiUpdater.updateUIForResponse(r);
                                 responsePanel.setRequestDetails(req);
                                 responsePanel.setResponseDetails(r);
@@ -136,7 +135,7 @@ final class SseRequestExecutor {
                             return;
                         }
                         responsePanel.setStatus(0);
-                        NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SSE_ERROR, userFriendlyMessage));
+                        NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SSE_ERROR, userFriendlyMessage));
                     });
                 }
                 return null;

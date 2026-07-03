@@ -1,5 +1,7 @@
 package com.laker.postman.panel.toolbox;
 
+import com.laker.postman.common.component.notification.NotificationCenter;
+
 import cn.hutool.core.text.csv.CsvData;
 import cn.hutool.core.text.csv.CsvReader;
 import cn.hutool.core.text.csv.CsvRow;
@@ -14,6 +16,7 @@ import com.laker.postman.common.component.ToolWindowSidebarToolbar;
 import com.laker.postman.common.component.ToolWindowSurfaceStyle;
 import com.laker.postman.common.component.button.*;
 import com.laker.postman.common.component.connection.ConnectionToolbarUi;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.common.component.table.EnhancedTablePanel;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.http.runtime.okhttp.OkHttpClientManager;
@@ -44,7 +47,7 @@ public class InfluxDbPanel extends JPanel {
         FLUX_V2
     }
 
-    private record TemplateItem(String name, String query) {
+    private record TemplateItem(String nameKey, String query) {
     }
 
     private record HttpResult(int code, String body, long costMs) {
@@ -76,8 +79,8 @@ public class InfluxDbPanel extends JPanel {
     private JTextField userField;
     private JPasswordField passwordField;
 
-    private SecondaryButton connectBtn;
-    private SecondaryButton disconnectBtn;
+    private JButton connectBtn;
+    private JButton disconnectBtn;
     private CardLayout btnCardLayout;
     private JPanel btnCard;
     private final InfluxDbConnectionProfileStore connectionProfileStore = new InfluxDbConnectionProfileStore();
@@ -89,7 +92,7 @@ public class InfluxDbPanel extends JPanel {
     private SearchableTextArea searchableQueryArea;
     private EnhancedTablePanel resultTablePanel;
     private JTabbedPane resultTabs;
-    private PrimaryButton executeBtn;
+    private CompactPrimaryButton executeBtn;
     private JLabel respStatusLabel;
     private JLabel queryLabel;
 
@@ -127,12 +130,11 @@ public class InfluxDbPanel extends JPanel {
     private static final int HOST_FIELD_WIDTH = 240;
     private static final int MODE_FIELD_WIDTH = 90;
     private static final int TOKEN_FIELD_WIDTH = HOST_FIELD_WIDTH;
-    private static final int ORG_FIELD_WIDTH = MODE_FIELD_WIDTH;
+    private static final int ORG_FIELD_WIDTH = 130;
     private static final int DB_FIELD_WIDTH = HOST_FIELD_WIDTH;
     private static final int MEASUREMENT_FIELD_WIDTH = 130;
     private static final int AUTH_FIELD_WIDTH = 120;
-    private static final int RELOAD_BUTTON_WIDTH = 88;
-    private static final int CONNECTION_BUTTON_WIDTH = 78;
+    private static final int QUERY_TOOLBAR_CONTROL_HEIGHT = 32;
 
     @RequiredArgsConstructor
     private static class HistoryEntry {
@@ -144,35 +146,35 @@ public class InfluxDbPanel extends JPanel {
     }
 
     private static final TemplateItem[] FLUX_TEMPLATES = {
-            new TemplateItem("Latest 100 Points",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_LATEST_100,
                     """
                             from(bucket: "example")
                               |> range(start: -1h)
                               |> sort(columns: ["_time"], desc: true)
                               |> limit(n: 100)
                             """),
-            new TemplateItem("Count By Measurement",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_COUNT_BY_MEASUREMENT,
                     """
                             from(bucket: "example")
                               |> range(start: -24h)
                               |> group(columns: ["_measurement"])
                               |> count()
                             """),
-            new TemplateItem("Mean By 1m",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_MEAN_BY_1M,
                     """
                             from(bucket: "example")
                               |> range(start: -6h)
                               |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
                               |> yield(name: "mean")
                             """),
-            new TemplateItem("Top 10 Values",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_TOP_10_VALUES,
                     """
                             from(bucket: "example")
                               |> range(start: -24h)
                               |> sort(columns: ["_value"], desc: true)
                               |> limit(n: 10)
                             """),
-            new TemplateItem("Group By Tag",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_GROUP_BY_TAG,
                     """
                             from(bucket: "example")
                               |> range(start: -24h)
@@ -180,7 +182,7 @@ public class InfluxDbPanel extends JPanel {
                               |> group(columns: ["host"])
                               |> last()
                             """),
-            new TemplateItem("Field Selector",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_FIELD_SELECTOR,
                     """
                             from(bucket: "example")
                               |> range(start: -1h)
@@ -188,7 +190,7 @@ public class InfluxDbPanel extends JPanel {
                               |> filter(fn: (r) => r._field == "usage_user")
                               |> limit(n: 200)
                             """),
-            new TemplateItem("Pivot View",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_FLUX_PIVOT_VIEW,
                     """
                             from(bucket: "example")
                               |> range(start: -30m)
@@ -198,20 +200,20 @@ public class InfluxDbPanel extends JPanel {
     };
 
     private static final TemplateItem[] INFLUXQL_TEMPLATES = {
-            new TemplateItem("Latest 100 Rows",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_LATEST_100,
                     """
                             SELECT *
                             FROM ${measurement}
                             ORDER BY time DESC
                             LIMIT 100
                             """),
-            new TemplateItem("Count Last 1h",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_COUNT_LAST_1H,
                     """
                             SELECT COUNT(*)
                             FROM ${measurement}
                             WHERE time > now() - 1h
                             """),
-            new TemplateItem("Mean By 1m",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_MEAN_BY_1M,
                     """
                             SELECT MEAN("value")
                             FROM ${measurement}
@@ -219,24 +221,24 @@ public class InfluxDbPanel extends JPanel {
                             GROUP BY time(1m)
                             FILL(null)
                             """),
-            new TemplateItem("Tag Values (host)",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_TAG_VALUES,
                     """
                             SHOW TAG VALUES
                             FROM ${measurement}
                             WITH KEY = "host"
                             LIMIT 200
                             """),
-            new TemplateItem("Field Keys",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_FIELD_KEYS,
                     """
                             SHOW FIELD KEYS
                             FROM ${measurement}
                             """),
-            new TemplateItem("Series Cardinality",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_SERIES_CARDINALITY,
                     """
                             SHOW SERIES CARDINALITY
                             FROM ${measurement}
                             """),
-            new TemplateItem("Last Point Per Host",
+            new TemplateItem(MessageKeys.TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_LAST_POINT_PER_HOST,
                     """
                             SELECT LAST("value")
                             FROM ${measurement}
@@ -273,7 +275,8 @@ public class InfluxDbPanel extends JPanel {
 
         JTabbedPane leftTabs = new JTabbedPane(SwingConstants.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
         ToolWindowSurfaceStyle.applyTabbedPaneCard(leftTabs);
-        leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_MEASUREMENT_MANAGEMENT), buildMeasurementPanel());
+        leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_MEASUREMENT_TAB), buildMeasurementPanel());
+        leftTabs.setToolTipTextAt(0, I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_MEASUREMENT_MANAGEMENT));
         leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_HISTORY), buildHistoryPanel());
 
         wrapper.add(leftTabs, BorderLayout.CENTER);
@@ -462,17 +465,24 @@ public class InfluxDbPanel extends JPanel {
         showModeFields(mode);
         if (mode == QueryMode.INFLUXQL_V1) {
             queryLabel.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_QUERY_TITLE_V1));
-            executeBtn.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_V1));
+            updateExecuteButtonForMode(mode);
             queryEditor.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
             if (v1QueryBuilderPanel != null) v1QueryBuilderPanel.setVisible(true);
         } else {
             queryLabel.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_QUERY_TITLE_V2));
-            executeBtn.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_V2));
+            updateExecuteButtonForMode(mode);
             queryEditor.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
             if (v1QueryBuilderPanel != null) v1QueryBuilderPanel.setVisible(false);
         }
         revalidate();
         repaint();
+    }
+
+    private void updateExecuteButtonForMode(QueryMode mode) {
+        executeBtn.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_SHORT));
+        executeBtn.setToolTipText(I18nUtil.getMessage(mode == QueryMode.INFLUXQL_V1
+                ? MessageKeys.TOOLBOX_INFLUX_EXECUTE_V1
+                : MessageKeys.TOOLBOX_INFLUX_EXECUTE_V2));
     }
 
     private void addToHistory(QueryMode mode, String db, String org, String measurement, String query) {
@@ -528,13 +538,13 @@ public class InfluxDbPanel extends JPanel {
     private void executeMeasurementQuickQuery(String measurement) {
         if (measurement == null || measurement.isBlank()) return;
         if (!connected) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_NOT_CONNECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_NOT_CONNECTED));
             return;
         }
         if (getSelectedMode() != QueryMode.INFLUXQL_V1) return;
         String db = getSelectedDatabase();
         if (db.isBlank()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_DB_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_DB_REQUIRED));
             return;
         }
 
@@ -660,17 +670,17 @@ public class InfluxDbPanel extends JPanel {
                     }
                     loadMeasurements(db);
                     if (targets.size() == 1) {
-                        NotificationUtil.showSuccess(MessageFormat.format(
+                        NotificationCenter.showSuccess(MessageFormat.format(
                                 I18nUtil.getMessage(singleSuccessMsgKey), targets.get(0)));
                     } else {
-                        NotificationUtil.showSuccess(MessageFormat.format(
+                        NotificationCenter.showSuccess(MessageFormat.format(
                                 I18nUtil.getMessage(batchSuccessMsgKey), targets.size()));
                     }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                     log.warn("measurement mutation interrupted", ex);
                 } catch (Exception ex) {
-                    NotificationUtil.showError(MessageFormat.format(
+                    NotificationCenter.showError(MessageFormat.format(
                             I18nUtil.getMessage(failedMsgKey), ex.getMessage()));
                 }
             }
@@ -734,13 +744,11 @@ public class InfluxDbPanel extends JPanel {
         });
         modeCombo.addActionListener(e -> switchMode(getSelectedMode()));
 
-        connectBtn = new SecondaryButton(
+        connectBtn = ConnectionToolbarUi.iconButton(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_CONNECT), "icons/connect.svg");
-        ConnectionToolbarUi.compactButton(connectBtn, CONNECTION_BUTTON_WIDTH);
         connectBtn.addActionListener(e -> doConnect());
-        disconnectBtn = new SecondaryButton(
+        disconnectBtn = ConnectionToolbarUi.iconButton(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_DISCONNECT), "icons/ws-close.svg");
-        ConnectionToolbarUi.compactButton(disconnectBtn, CONNECTION_BUTTON_WIDTH);
         disconnectBtn.addActionListener(e -> doDisconnect());
 
         btnCardLayout = new CardLayout();
@@ -754,7 +762,7 @@ public class InfluxDbPanel extends JPanel {
                 "insets 0, fillx, novisualpadding, gapx 0",
                 ConnectionToolbarUi.profileActionColumns()
                         + ConnectionToolbarUi.connectionFieldColumns(HOST_FIELD_WIDTH) + "4"
-                        + ConnectionToolbarUi.connectionFieldColumns(MODE_FIELD_WIDTH)
+                        + ConnectionToolbarUi.wideConnectionFieldColumns(MODE_FIELD_WIDTH)
                         + "6[]push",
                 "[]"
         ));
@@ -792,7 +800,7 @@ public class InfluxDbPanel extends JPanel {
                 "insets 2 0 2 0, fillx, novisualpadding, gapx 0",
                 ConnectionToolbarUi.profileActionColumns()
                         + ConnectionToolbarUi.connectionFieldColumns(TOKEN_FIELD_WIDTH) + "4"
-                        + ConnectionToolbarUi.connectionFieldColumns(ORG_FIELD_WIDTH) + "push",
+                        + ConnectionToolbarUi.wideConnectionFieldColumns(ORG_FIELD_WIDTH) + "push",
                 "[]"
         ));
 
@@ -823,7 +831,7 @@ public class InfluxDbPanel extends JPanel {
                         + ConnectionToolbarUi.wideConnectionFieldColumns(MEASUREMENT_FIELD_WIDTH) + "4"
                         + ConnectionToolbarUi.connectionFieldColumns(AUTH_FIELD_WIDTH) + "4"
                         + ConnectionToolbarUi.wideConnectionFieldColumns(AUTH_FIELD_WIDTH)
-                        + "6[]push",
+                        + "4[]push",
                 "[]"
         ));
 
@@ -857,9 +865,8 @@ public class InfluxDbPanel extends JPanel {
             }
         });
 
-        SecondaryButton reloadMetaBtn = new SecondaryButton(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_RELOAD_META));
-        ConnectionToolbarUi.compactButton(reloadMetaBtn, RELOAD_BUTTON_WIDTH);
-        reloadMetaBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_RELOAD_META));
+        JButton reloadMetaBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_RELOAD_META), "icons/refresh.svg");
         reloadMetaBtn.addActionListener(e -> {
             String db = getSelectedDatabase();
             loadDatabases(() -> {
@@ -954,7 +961,7 @@ public class InfluxDbPanel extends JPanel {
         InfluxDbConnectionProfile profile = buildProfile(UUID.randomUUID().toString(), name);
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
-        NotificationUtil.showSuccess(MessageFormat.format(
+        NotificationCenter.showSuccess(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVED), profile.getName()));
         hostField.requestFocusInWindow();
     }
@@ -962,25 +969,25 @@ public class InfluxDbPanel extends JPanel {
     private void saveCurrentConnectionProfile(boolean notify) {
         InfluxDbConnectionProfile selectedProfile = getSelectedConnectionProfile();
         if (selectedProfile == null) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NOT_SELECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NOT_SELECTED));
             return;
         }
         if (getCurrentHost().isBlank()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
             return;
         }
         InfluxDbConnectionProfile profile = buildProfile(selectedProfile.getId(), selectedProfile.getName());
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
         if (notify) {
-            NotificationUtil.showSuccess(MessageFormat.format(
+            NotificationCenter.showSuccess(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVED), profile.getName()));
         }
     }
 
     private void saveCurrentConnectionProfileAs() {
         if (getCurrentHost().isBlank()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
             return;
         }
         InfluxDbConnectionProfile selectedProfile = getSelectedConnectionProfile();
@@ -994,7 +1001,7 @@ public class InfluxDbPanel extends JPanel {
         InfluxDbConnectionProfile profile = buildProfile(UUID.randomUUID().toString(), name);
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
-        NotificationUtil.showSuccess(MessageFormat.format(
+        NotificationCenter.showSuccess(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVED), profile.getName()));
     }
 
@@ -1011,7 +1018,7 @@ public class InfluxDbPanel extends JPanel {
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
         if (notify) {
-            NotificationUtil.showSuccess(MessageFormat.format(
+            NotificationCenter.showSuccess(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVED), profile.getName()));
         }
     }
@@ -1019,11 +1026,11 @@ public class InfluxDbPanel extends JPanel {
     private void deleteSelectedConnectionProfile() {
         InfluxDbConnectionProfile selectedProfile = getSelectedConnectionProfile();
         if (selectedProfile == null) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NOT_SELECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NOT_SELECTED));
             return;
         }
         if (isDefaultProfile(selectedProfile)) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_DEFAULT_NOT_DELETABLE));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_DEFAULT_NOT_DELETABLE));
             return;
         }
         int result = JOptionPane.showConfirmDialog(this,
@@ -1038,7 +1045,7 @@ public class InfluxDbPanel extends JPanel {
         String deletedName = selectedProfile.getName();
         connectionProfileStore.deleteProfile(selectedProfile.getId());
         loadSavedConnectionProfiles(InfluxDbConnectionProfileStore.DEFAULT_PROFILE_ID);
-        NotificationUtil.showInfo(MessageFormat.format(
+        NotificationCenter.showInfo(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_DELETED), deletedName));
     }
 
@@ -1064,23 +1071,14 @@ public class InfluxDbPanel extends JPanel {
     }
 
     private String promptProfileName(String initialValue, String existingProfileId) {
-        Object value = JOptionPane.showInputDialog(this,
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVE_AS_PROMPT),
+        String name = TextInputDialog.showRequiredName(this,
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_SAVE_AS_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                initialValue);
-        if (value == null) {
-            return null;
-        }
-        String name = value.toString().trim();
-        if (name.isBlank()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NAME_REQUIRED));
-            return null;
-        }
+                initialValue,
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NAME_REQUIRED)
+        ).orElse(null);
+        if (name == null) return null;
         if (profileNameExists(name, existingProfileId)) {
-            NotificationUtil.showWarning(MessageFormat.format(
+            NotificationCenter.showWarning(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_PROFILE_NAME_EXISTS), name));
             return null;
         }
@@ -1179,23 +1177,20 @@ public class InfluxDbPanel extends JPanel {
         ToolWindowSurfaceStyle.applySectionHeader(toolbar);
 
         templateCombo = new JComboBox<>();
-        templateCombo.setPreferredSize(new Dimension(180, 32));
+        templateCombo.setPreferredSize(new Dimension(180, QUERY_TOOLBAR_CONTROL_HEIGHT));
 
-        SecondaryButton loadTemplateBtn = new SecondaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_LOAD_TEMPLATE), "icons/load.svg");
-        loadTemplateBtn.setPreferredSize(new Dimension(loadTemplateBtn.getPreferredSize().width, 32));
-        loadTemplateBtn.addActionListener(e -> loadTemplate());
+        JButton loadTemplateBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_LOAD_TEMPLATE), "icons/load.svg", e -> loadTemplate());
 
-        executeBtn = new PrimaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE), "icons/send.svg");
+        executeBtn = new CompactPrimaryButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_SHORT), "icons/send.svg");
         executeBtn.addActionListener(e -> executeQuery());
 
-        CopyButton copyBtn = new CopyButton();
-        copyBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_COPY_RESULT));
-        copyBtn.addActionListener(e -> copyResult());
+        JButton copyBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_COPY_RESULT), "icons/copy.svg", e -> copyResult());
 
-        ClearButton clearBtn = new ClearButton();
-        clearBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_CLEAR));
+        JButton clearBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_CLEAR), "icons/clear.svg");
         clearBtn.addActionListener(e -> {
             queryEditor.setText("");
             resultArea.setText("");
@@ -1205,8 +1200,8 @@ public class InfluxDbPanel extends JPanel {
             respStatusLabel.setText("");
         });
 
-        toolbar.add(templateCombo);
-        toolbar.add(loadTemplateBtn);
+        toolbar.add(templateCombo, "w 180!, h " + QUERY_TOOLBAR_CONTROL_HEIGHT + "!");
+        toolbar.add(loadTemplateBtn, "h " + QUERY_TOOLBAR_CONTROL_HEIGHT + "!");
         toolbar.add(new JSeparator(SwingConstants.VERTICAL), "growy, gap 2 2");
         toolbar.add(clearBtn);
         toolbar.add(copyBtn);
@@ -1290,7 +1285,7 @@ public class InfluxDbPanel extends JPanel {
         wrapper.add(new JSeparator(SwingConstants.VERTICAL), "growy, gap 2 2");
 
         // Tag 浏览区
-        wrapper.add(new JLabel("Tags:"));
+        wrapper.add(new JLabel(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_TAGS)));
         tagRowsPanel = new JPanel(new MigLayout("insets 0, fillx", "[][fill][]", "[]"));
         tagRowsPanel.setOpaque(false);
         wrapper.add(tagRowsPanel);
@@ -1393,13 +1388,13 @@ public class InfluxDbPanel extends JPanel {
 
         if (mode == QueryMode.INFLUXQL_V1) {
             queryLabel.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_QUERY_TITLE_V1));
-            executeBtn.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_V1));
+            updateExecuteButtonForMode(mode);
             queryEditor.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
             if (v1QueryBuilderPanel != null) v1QueryBuilderPanel.setVisible(true);
             setTemplates(INFLUXQL_TEMPLATES);
         } else {
             queryLabel.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_QUERY_TITLE_V2));
-            executeBtn.setText(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_EXECUTE_V2));
+            updateExecuteButtonForMode(mode);
             queryEditor.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
             if (v1QueryBuilderPanel != null) v1QueryBuilderPanel.setVisible(false);
             clearMeasurementList();
@@ -1413,7 +1408,7 @@ public class InfluxDbPanel extends JPanel {
         currentTemplates = templates;
         templateCombo.removeAllItems();
         for (TemplateItem t : templates) {
-            templateCombo.addItem(t.name());
+            templateCombo.addItem(I18nUtil.getMessage(t.nameKey()));
         }
         if (templates.length > 0) {
             queryEditor.setText(applyTemplateVariables(templates[0].query()));
@@ -1460,7 +1455,7 @@ public class InfluxDbPanel extends JPanel {
     private void doConnect() {
         String inputHost = getCurrentHost();
         if (inputHost.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_HOST_REQUIRED));
             return;
         }
         inputHost = InfluxDbConnectionProfileStore.normalizeBaseUrl(inputHost);
@@ -1490,7 +1485,7 @@ public class InfluxDbPanel extends JPanel {
                     connected = true;
                     btnCardLayout.show(btnCard, DISCONNECT_CARD);
                     addHostHistory(finalBaseUrl);
-                    NotificationUtil.showSuccess(MessageFormat.format(
+                    NotificationCenter.showSuccess(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_CONNECT_SUCCESS), finalBaseUrl));
                     if (mode == QueryMode.INFLUXQL_V1) {
                         loadDatabases(() -> {
@@ -1505,7 +1500,7 @@ public class InfluxDbPanel extends JPanel {
                     connected = false;
                     clearMeasurementList();
                     btnCardLayout.show(btnCard, CONNECT_CARD);
-                    NotificationUtil.showError(MessageFormat.format(
+                    NotificationCenter.showError(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_CONNECT_FAILED),
                             ex.getMessage()));
                 }
@@ -1519,7 +1514,7 @@ public class InfluxDbPanel extends JPanel {
         clearMeasurementList();
         btnCardLayout.show(btnCard, CONNECT_CARD);
         respStatusLabel.setText("");
-        NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_DISCONNECT_SUCCESS));
+        NotificationCenter.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_DISCONNECT_SUCCESS));
     }
 
     private String getCurrentHost() {
@@ -1532,25 +1527,25 @@ public class InfluxDbPanel extends JPanel {
 
     private void executeQuery() {
         if (!connected) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_NOT_CONNECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_NOT_CONNECTED));
             return;
         }
 
         String query = queryEditor.getText().trim();
         if (query.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_QUERY_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_QUERY_REQUIRED));
             return;
         }
 
         QueryMode mode = getSelectedMode();
         if (mode == QueryMode.FLUX_V2) {
             if (orgField.getText().trim().isBlank()) {
-                NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_ORG_REQUIRED));
+                NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_ORG_REQUIRED));
                 return;
             }
         } else {
             if (getSelectedDatabase().isBlank()) {
-                NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_DB_REQUIRED));
+                NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_ERR_DB_REQUIRED));
                 return;
             }
         }
@@ -1597,7 +1592,7 @@ public class InfluxDbPanel extends JPanel {
                     else statusColor = ModernColors.getWarningDark();
                     respStatusLabel.setForeground(statusColor);
                     if (logicalError) {
-                        NotificationUtil.showError(influxError);
+                        NotificationCenter.showError(influxError);
                     }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
@@ -1606,7 +1601,7 @@ public class InfluxDbPanel extends JPanel {
                     respStatusLabel.setText(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_STATUS_ERROR), "0"));
                     respStatusLabel.setForeground(ModernColors.getError());
-                    NotificationUtil.showError(ex.getMessage());
+                    NotificationCenter.showError(ex.getMessage());
                 }
             }
         };
@@ -2208,6 +2203,6 @@ public class InfluxDbPanel extends JPanel {
         if (text == null || text.isBlank()) return;
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(
                 new StringSelection(text), null);
-        NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_RESULT_COPIED));
+        NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.TOOLBOX_INFLUX_RESULT_COPIED));
     }
 }

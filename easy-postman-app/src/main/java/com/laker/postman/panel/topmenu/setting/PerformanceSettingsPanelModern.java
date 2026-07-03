@@ -4,7 +4,7 @@ import com.laker.postman.service.js.JsScriptExecutor;
 import com.laker.postman.service.setting.SettingManager;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -277,25 +277,13 @@ public class PerformanceSettingsPanelModern extends ModernSettingsPanel {
                 }
             }
         });
-
-        // 键盘快捷键
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        ActionMap actionMap = getActionMap();
-
-        inputMap.put(KeyStroke.getKeyStroke("control S"), "save");
-        actionMap.put("save", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                saveSettings(false);
-            }
-        });
-
+        registerSaveShortcut(() -> saveSettings(false));
     }
 
     private void saveSettings(boolean closeAfterSave) {
         // 验证所有字段
         if (!validateAllFields()) {
-            NotificationUtil.showError(
+            NotificationCenter.showError(
                     I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_ERROR_MESSAGE));
             return;
         }
@@ -330,7 +318,7 @@ public class PerformanceSettingsPanelModern extends ModernSettingsPanel {
             trackComponentValue(eventLoggingCheckBox);
             setHasUnsavedChanges(false);
 
-            NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_SUCCESS_MESSAGE));
+            NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_SUCCESS_MESSAGE));
 
             // 根据参数决定是否关闭对话框
             if (closeAfterSave) {
@@ -340,7 +328,7 @@ public class PerformanceSettingsPanelModern extends ModernSettingsPanel {
                 }
             }
         } catch (Exception ex) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_ERROR_MESSAGE) + ": " + ex.getMessage());
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_ERROR_MESSAGE) + ": " + ex.getMessage());
         }
     }
 }

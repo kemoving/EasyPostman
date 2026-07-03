@@ -1,7 +1,10 @@
 package com.laker.postman.panel.collections.editor.request;
 
 import com.laker.postman.http.execution.RequestPreparationResult;
+import com.laker.postman.http.execution.RequestPreparationNetworkLogPublisher;
 import com.laker.postman.http.request.HttpRequestProtocol;
+import com.laker.postman.http.runtime.model.HttpCaptureProfile;
+import com.laker.postman.http.runtime.model.HttpCaptureProfiles;
 import com.laker.postman.http.runtime.model.PreparedRequest;
 import com.laker.postman.http.runtime.ssl.SSLConfigurationUtil;
 import com.laker.postman.panel.collections.editor.request.sub.ResponsePanel;
@@ -27,6 +30,7 @@ final class RequestProtocolDispatcher {
         PreparedRequest request = result.getRequest();
         attachNetworkLogSink(request);
         attachHttpResponseInteraction(request);
+        RequestPreparationNetworkLogPublisher.publish(request);
         ScriptExecutionPipeline pipeline = result.getPipeline();
         boolean expectedHttpSse = protocol.isHttpProtocol() && HttpRequestProtocol.isSse(request);
 
@@ -54,9 +58,7 @@ final class RequestProtocolDispatcher {
             return;
         }
         // HTTP 执行层只发布 NetworkLogEvent；请求编辑器在这里把事件接回当前响应面板。
-        request.collectBasicInfo = true;
-        request.collectEventInfo = true;
-        request.enableNetworkLog = true;
+        HttpCaptureProfiles.apply(request, HttpCaptureProfile.COLLECTION_DIAGNOSTIC);
         request.networkLogSink = event -> responsePanel.getNetworkLogPanel().appendLog(event);
         request.lifecycleLogSink = SwingHttpRuntimeInteractionAdapter.lifecycleLogSink();
     }

@@ -43,6 +43,7 @@ public class PreparedRequest {
     public TransportAuth transportAuth; // 发送阶段需要的传输层认证元数据（例如 Digest challenge 认证）
 
     // 事件监听控制（精细化控制）
+    public HttpCaptureProfile captureProfile; // 执行场景采集策略；为空时兼容旧布尔字段组合
     public boolean collectBasicInfo = true; // 收集基本信息（headers、body），默认开启
     public boolean collectMetricsInfo = false; // 仅采集压测统计需要的轻量指标（时间戳、发送/接收字节）
     public boolean collectEventInfo = true; // 收集完整事件信息（DNS、连接、SSL等），默认开启
@@ -59,8 +60,11 @@ public class PreparedRequest {
     public String prescript;
     public String postscript;
 
+    public String sentUrl; // 实际发送的 URL 快照
+    public String sentMethod; // 实际发送的 HTTP 方法快照
     public List<HttpHeader> sentHeadersList; // 实际发送的请求头快照
     public String sentRequestBody; // 实际发送的请求体内容
+    public boolean sentRequestBodyReplayable; // 实际请求体快照是否完整且可用于 cURL 复现
     public transient volatile HttpEventInfo exchangeEventInfo; // 运行期事件信息，仅供 SSE/WS 异步回调读取，不参与持久化
 
     /**
@@ -73,12 +77,15 @@ public class PreparedRequest {
         copy.name = this.name;
         copy.url = this.url;
         copy.method = this.method;
+        copy.sentUrl = this.sentUrl;
+        copy.sentMethod = this.sentMethod;
         copy.sentHeadersList = this.sentHeadersList == null ? null : new ArrayList<>(this.sentHeadersList);
         // 单次发包的运行态 trace 不随请求配置复制，避免重定向/重发带上上一跳连接信息。
         copy.exchangeEventInfo = null;
         copy.body = this.body;
         copy.bodyType = this.bodyType;
         copy.sentRequestBody = this.sentRequestBody;
+        copy.sentRequestBodyReplayable = this.sentRequestBodyReplayable;
         copy.isMultipart = this.isMultipart;
         copy.followRedirects = this.followRedirects;
         copy.cookieJarEnabled = this.cookieJarEnabled;
@@ -87,6 +94,7 @@ public class PreparedRequest {
         copy.httpVersion = this.httpVersion;
         copy.requestTimeoutMs = this.requestTimeoutMs;
         copy.transportAuth = this.transportAuth != null ? this.transportAuth.shallowCopy() : null;
+        copy.captureProfile = this.captureProfile;
         copy.collectBasicInfo = this.collectBasicInfo;
         copy.collectMetricsInfo = this.collectMetricsInfo;
         copy.collectEventInfo = this.collectEventInfo;
@@ -110,7 +118,7 @@ public class PreparedRequest {
 
     /**
      * 简化对象，将渲染时不需要的字段置为 null，减少内存占用
-     * 保留的字段：url, method, sentHeadersList, formDataList, urlencodedList, sentRequestBody
+     * 保留的字段：url, method, sentUrl, sentMethod, sentHeadersList, formDataList, urlencodedList, sentRequestBody, sentRequestBodyReplayable
      * 置为 null 的字段：id, name, body, bodyType, transportAuth, headersList,
      * pathVariablesList, paramsList, exchangeEventInfo
      */

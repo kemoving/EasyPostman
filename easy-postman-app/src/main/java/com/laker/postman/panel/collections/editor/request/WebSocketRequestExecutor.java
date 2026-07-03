@@ -1,5 +1,7 @@
 package com.laker.postman.panel.collections.editor.request;
 
+import com.laker.postman.http.runtime.model.HttpCaptureProfile;
+import com.laker.postman.http.runtime.model.HttpCaptureProfiles;
 import com.laker.postman.http.runtime.model.HttpResponse;
 import com.laker.postman.stream.MessageType;
 import com.laker.postman.http.runtime.model.PreparedRequest;
@@ -12,7 +14,7 @@ import com.laker.postman.http.runtime.transport.RealtimeWebSocketConnection;
 import com.laker.postman.service.js.ScriptExecutionPipeline;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
 import okhttp3.WebSocket;
@@ -65,10 +67,7 @@ final class WebSocketRequestExecutor {
     }
 
     SwingWorker<Void, Void> createWorker(PreparedRequest req, ScriptExecutionPipeline pipeline) {
-        req.collectBasicInfo = true;
-        req.collectMetricsInfo = true;
-        req.collectEventInfo = true;
-        req.enableNetworkLog = true;
+        HttpCaptureProfiles.apply(req, HttpCaptureProfile.COLLECTION_DIAGNOSTIC);
         WebSocketSession session = new WebSocketSession(req, pipeline);
         requestExecutionState.beginWebSocketConnection(session.connectionId());
 
@@ -215,7 +214,7 @@ final class WebSocketRequestExecutor {
                         String errorMsg = response != null
                                 ? I18nUtil.getMessage(MessageKeys.WEBSOCKET_FAILED, t.getMessage() + " (" + response.code() + ")")
                                 : I18nUtil.getMessage(MessageKeys.WEBSOCKET_FAILED, t.getMessage());
-                        NotificationUtil.showError(errorMsg);
+                        NotificationCenter.showError(errorMsg);
                     });
                 }
             };
@@ -239,7 +238,7 @@ final class WebSocketRequestExecutor {
                     return;
                 }
                 webSocketConnectionUi.updateUIForResponse(null);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.WEBSOCKET_ERROR, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.WEBSOCKET_ERROR, ex.getMessage()));
                 webSocketConnectionUi.setWebSocketConnected(false);
             });
         }

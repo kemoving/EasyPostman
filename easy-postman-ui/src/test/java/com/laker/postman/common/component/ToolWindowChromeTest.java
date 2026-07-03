@@ -32,6 +32,7 @@ public class ToolWindowChromeTest {
         previousTokens.put(ThemeColors.SURFACE, UIManager.get(ThemeColors.SURFACE));
         previousTokens.put(ThemeColors.BORDER_LIGHT, UIManager.get(ThemeColors.BORDER_LIGHT));
         previousTokens.put(ThemeColors.DIVIDER, UIManager.get(ThemeColors.DIVIDER));
+        previousTokens.put(ThemeColors.TAB_SEPARATOR, UIManager.get(ThemeColors.TAB_SEPARATOR));
     }
 
     @AfterMethod
@@ -159,6 +160,23 @@ public class ToolWindowChromeTest {
     }
 
     @Test
+    public void shouldCreateInvisibleHorizontalInnerSplitPaneWithFourPixelDivider() {
+        JLabel left = new JLabel("left");
+        JLabel right = new JLabel("right");
+
+        JSplitPane splitPane = ToolWindowChrome.createHorizontalInvisibleInnerSplitPane(
+                left,
+                right,
+                ToolWindowChrome.DEFAULT_SIDE_WIDTH
+        );
+
+        assertEquals(splitPane.getDividerLocation(), ToolWindowChrome.DEFAULT_SIDE_WIDTH);
+        assertEquals(splitPane.getDividerSize(), ToolWindowChrome.DIVIDER_SIZE);
+        assertSame(splitPane.getLeftComponent(), left);
+        assertSame(splitPane.getRightComponent(), right);
+    }
+
+    @Test
     public void shouldCreateHorizontalCardSplitPaneWithMatchingToolWindowGaps() {
         JLabel left = new JLabel("left");
         JLabel right = new JLabel("right");
@@ -203,6 +221,24 @@ public class ToolWindowChromeTest {
         assertEquals(leftWrapper.getInsets().right, 0);
         assertEquals(rightWrapper.getInsets().left, 0);
         assertEquals(rightWrapper.getInsets().right, 6);
+    }
+
+    @Test
+    public void shouldCreateStackedDragGapSplitWithSameCardGapAsHorizontalDragGap() {
+        JSplitPane horizontalSplit = ToolWindowChrome.createHorizontalCardSplitPane(
+                new JLabel("left"),
+                new JLabel("right"),
+                ToolWindowChrome.DEFAULT_SIDE_WIDTH,
+                ToolWindowChrome.SplitDividerStyle.DRAG_GAP
+        );
+        JSplitPane stackedSplit = ToolWindowChrome.createVerticalStackedCardSplitPane(
+                horizontalSplit,
+                new JLabel("bottom"),
+                260,
+                ToolWindowChrome.SplitDividerStyle.DRAG_GAP
+        );
+
+        assertEquals(stackedCardGap(stackedSplit), horizontalCardGap(horizontalSplit));
     }
 
     @Test
@@ -259,6 +295,19 @@ public class ToolWindowChromeTest {
         assertTrue(toolWindowWrapper.getComponent(0) instanceof RoundedToolWindowPanel);
         RoundedToolWindowPanel roundedPanel = (RoundedToolWindowPanel) toolWindowWrapper.getComponent(0);
         assertSame(roundedPanel.getComponent(0), content);
+    }
+
+    private static int horizontalCardGap(JSplitPane splitPane) {
+        JComponent leftWrapper = (JComponent) splitPane.getLeftComponent();
+        JComponent rightWrapper = (JComponent) splitPane.getRightComponent();
+        return leftWrapper.getInsets().right + splitPane.getDividerSize() + rightWrapper.getInsets().left;
+    }
+
+    private static int stackedCardGap(JSplitPane splitPane) {
+        JSplitPane topSplit = (JSplitPane) splitPane.getTopComponent();
+        JComponent topWrapper = (JComponent) topSplit.getLeftComponent();
+        JComponent bottomWrapper = (JComponent) splitPane.getBottomComponent();
+        return topWrapper.getInsets().bottom + splitPane.getDividerSize() + bottomWrapper.getInsets().top;
     }
 
     @Test
@@ -332,9 +381,13 @@ public class ToolWindowChromeTest {
     }
 
     @Test
-    public void dragGapInnerSplitDividerShouldPaintWideBackgroundDragAreaWithoutLine() {
+    public void dragGapHorizontalInnerSplitDividerShouldPaintWideDragAreaWithCenterLine() {
         Color background = new Color(244, 246, 249);
+        Color surface = new Color(255, 255, 255);
+        Color line = new Color(214, 218, 226);
         UIManager.put(ThemeColors.BACKGROUND, background);
+        UIManager.put(ThemeColors.SURFACE, surface);
+        UIManager.put(ThemeColors.TAB_SEPARATOR, line);
 
         JSplitPane splitPane = ToolWindowChrome.createHorizontalInnerSplitPane(
                 new JLabel("left"),
@@ -354,11 +407,69 @@ public class ToolWindowChromeTest {
         divider.paint(graphics);
         graphics.dispose();
 
+        int centerX = ToolWindowChrome.DRAG_GAP_DIVIDER_SIZE / 2;
+        assertEquals(new Color(image.getRGB(centerX, 20), true), line);
+        assertEquals(new Color(image.getRGB(0, 20), true), surface);
+    }
+
+    @Test
+    public void invisibleHorizontalInnerSplitDividerShouldPaintOnlyCardBackground() {
+        Color surface = new Color(255, 255, 255);
+        Color line = new Color(214, 218, 226);
+        UIManager.put(ThemeColors.SURFACE, surface);
+        UIManager.put(ThemeColors.BORDER_LIGHT, line);
+        UIManager.put(ThemeColors.TAB_SEPARATOR, line);
+
+        JSplitPane splitPane = ToolWindowChrome.createHorizontalInvisibleInnerSplitPane(
+                new JLabel("left"),
+                new JLabel("right"),
+                ToolWindowChrome.DEFAULT_SIDE_WIDTH
+        );
+        BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splitPane.getUI()).getDivider();
+        divider.setSize(ToolWindowChrome.DIVIDER_SIZE, 40);
+
+        BufferedImage image = new BufferedImage(ToolWindowChrome.DIVIDER_SIZE, 40, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = image.createGraphics();
+        divider.paint(graphics);
+        graphics.dispose();
+
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                assertEquals(new Color(image.getRGB(x, y), true), background);
+                assertEquals(new Color(image.getRGB(x, y), true), surface);
             }
         }
+    }
+
+    @Test
+    public void dragGapVerticalInnerSplitDividerShouldPaintWideDragAreaWithCenterLine() {
+        Color background = new Color(244, 246, 249);
+        Color surface = new Color(255, 255, 255);
+        Color line = new Color(214, 218, 226);
+        UIManager.put(ThemeColors.BACKGROUND, background);
+        UIManager.put(ThemeColors.SURFACE, surface);
+        UIManager.put(ThemeColors.TAB_SEPARATOR, line);
+
+        JSplitPane splitPane = ToolWindowChrome.createVerticalInnerSplitPane(
+                new JLabel("top"),
+                new JLabel("bottom"),
+                ToolWindowChrome.DEFAULT_SIDE_WIDTH,
+                ToolWindowChrome.SplitDividerStyle.DRAG_GAP
+        );
+        BasicSplitPaneDivider divider = ((BasicSplitPaneUI) splitPane.getUI()).getDivider();
+        divider.setSize(40, ToolWindowChrome.DRAG_GAP_DIVIDER_SIZE);
+
+        BufferedImage image = new BufferedImage(
+                40,
+                ToolWindowChrome.DRAG_GAP_DIVIDER_SIZE,
+                BufferedImage.TYPE_INT_ARGB
+        );
+        Graphics2D graphics = image.createGraphics();
+        divider.paint(graphics);
+        graphics.dispose();
+
+        int centerY = ToolWindowChrome.DRAG_GAP_DIVIDER_SIZE / 2;
+        assertEquals(new Color(image.getRGB(20, centerY), true), line);
+        assertEquals(new Color(image.getRGB(20, 0), true), surface);
     }
 
     @Test

@@ -4,19 +4,19 @@ import com.laker.postman.panel.collections.editor.request.RequestEditSubPanel;
 import com.laker.postman.request.model.HttpRequestItem;
 import com.laker.postman.request.model.RequestItemProtocolEnum;
 import com.laker.postman.service.curl.CurlImportUtil;
+import com.laker.postman.util.AsyncClipboardUtil;
+import com.laker.postman.util.ClipboardUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.RequiredArgsConstructor;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
-
-import static com.laker.postman.util.ClipboardUtil.getClipboardCurlText;
 
 /**
  * “+ Tab” 的点击控制器。
@@ -46,10 +46,7 @@ final class RequestEditorPlusTabController {
             return;
         }
 
-        if (tryCreateRequestFromClipboardCurl()) {
-            return;
-        }
-        requestTabCreator.apply(defaultRequestTitle, RequestItemProtocolEnum.HTTP);
+        createRequestFromClipboardCurlOrDefault();
     }
 
     private boolean isPlusTab(int tabIndex) {
@@ -58,8 +55,20 @@ final class RequestEditorPlusTabController {
                 && plusTabTitle.equals(tabbedPane.getTitleAt(tabIndex));
     }
 
-    private boolean tryCreateRequestFromClipboardCurl() {
-        String curlText = getClipboardCurlText();
+    private void createRequestFromClipboardCurlOrDefault() {
+        readClipboardCurlTextAsync().thenAccept(curlText -> SwingUtilities.invokeLater(() -> {
+            if (tryCreateRequestFromClipboardCurl(curlText)) {
+                return;
+            }
+            requestTabCreator.apply(defaultRequestTitle, RequestItemProtocolEnum.HTTP);
+        }));
+    }
+
+    private CompletableFuture<String> readClipboardCurlTextAsync() {
+        return ClipboardUtil.getClipboardCurlTextAsync();
+    }
+
+    private boolean tryCreateRequestFromClipboardCurl(String curlText) {
         if (curlText == null) {
             return false;
         }
@@ -79,15 +88,15 @@ final class RequestEditorPlusTabController {
             RequestEditSubPanel tab = requestTabCreator.apply(null, item.getProtocol());
             item.setId(tab.getId());
             tab.initPanelData(item);
-            clearClipboard();
+            clearClipboardAsync();
             return true;
         } catch (Exception ex) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.PARSE_CURL_ERROR, ex.getMessage()));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.PARSE_CURL_ERROR, ex.getMessage()));
             return true;
         }
     }
 
-    private void clearClipboard() {
-        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(""), null);
+    private void clearClipboardAsync() {
+        AsyncClipboardUtil.clearStringAsync();
     }
 }

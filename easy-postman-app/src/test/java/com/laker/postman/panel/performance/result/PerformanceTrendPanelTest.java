@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -84,6 +85,136 @@ public class PerformanceTrendPanelTest extends AbstractSwingUiTest {
         assertFalse(findAll(panel, JCheckBox.class).isEmpty());
 
         separateButton.doClick();
+    }
+
+    @Test
+    public void shouldHideProtocolSwitcherWhenOnlyHttpMetricsAreAvailable() throws Exception {
+        clearSingletonInstance(PerformanceTrendPanel.class);
+        PerformanceTrendPanel panel = UiSingletonFactory.getInstance(PerformanceTrendPanel.class);
+        panel.setAvailableProtocols(EnumSet.of(PerformanceProtocol.HTTP));
+        panel.setSize(new Dimension(1500, 700));
+        layoutRecursively(panel);
+
+        assertFalse(isEffectivelyVisible(
+                findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.HTTP)),
+                panel
+        ));
+        assertFalse(isEffectivelyVisible(
+                findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.WEBSOCKET)),
+                panel
+        ));
+        assertTrue(isEffectivelyVisible(
+                findCheckBox(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_VIRTUAL_USERS)),
+                panel
+        ));
+        assertTrue(isEffectivelyVisible(
+                findToggleButton(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_SEPARATE_CHARTS)),
+                panel
+        ));
+    }
+
+    @Test
+    public void shouldShowOnlyAvailableProtocolButtonsWhenStreamingMetricsExist() throws Exception {
+        clearSingletonInstance(PerformanceTrendPanel.class);
+        PerformanceTrendPanel panel = UiSingletonFactory.getInstance(PerformanceTrendPanel.class);
+        panel.setAvailableProtocols(EnumSet.of(PerformanceProtocol.HTTP, PerformanceProtocol.WEBSOCKET));
+        panel.setSize(new Dimension(1500, 700));
+        layoutRecursively(panel);
+
+        JToggleButton httpButton = findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.HTTP));
+        JToggleButton webSocketButton = findToggleButton(
+                panel,
+                PerformanceProtocolLabels.displayName(PerformanceProtocol.WEBSOCKET)
+        );
+        JToggleButton sseButton = findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.SSE));
+
+        assertTrue(isEffectivelyVisible(httpButton, panel));
+        assertTrue(isEffectivelyVisible(webSocketButton, panel));
+        assertFalse(isEffectivelyVisible(sseButton, panel));
+
+        webSocketButton.doClick();
+        layoutRecursively(panel);
+
+        assertTrue(isEffectivelyVisible(
+                findCheckBox(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_ACTIVE_WS)),
+                panel
+        ));
+        assertFalse(isEffectivelyVisible(
+                findCheckBox(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_VIRTUAL_USERS)),
+                panel
+        ));
+    }
+
+    @Test
+    public void shouldSelectSingleStreamingProtocolWithoutShowingProtocolSwitcher() throws Exception {
+        clearSingletonInstance(PerformanceTrendPanel.class);
+        PerformanceTrendPanel panel = UiSingletonFactory.getInstance(PerformanceTrendPanel.class);
+        panel.setAvailableProtocols(EnumSet.of(PerformanceProtocol.WEBSOCKET));
+        panel.setSize(new Dimension(1500, 700));
+        layoutRecursively(panel);
+
+        assertFalse(isEffectivelyVisible(
+                findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.WEBSOCKET)),
+                panel
+        ));
+        assertTrue(isEffectivelyVisible(
+                findCheckBox(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_ACTIVE_WS)),
+                panel
+        ));
+        assertFalse(isEffectivelyVisible(
+                findCheckBox(panel, I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_VIRTUAL_USERS)),
+                panel
+        ));
+    }
+
+    @Test
+    public void lazyTrendPanelShouldCacheProtocolsWithoutCreatingCharts() {
+        LazyPerformanceTrendPanel panel = new LazyPerformanceTrendPanel(PerformanceTrendPanel::new);
+
+        panel.setAvailableProtocols(EnumSet.of(PerformanceProtocol.WEBSOCKET));
+
+        assertFalse(panel.isTrendPanelCreated());
+    }
+
+    @Test
+    public void shouldSeparateTrendViewControlsFromMetricFilters() throws Exception {
+        clearSingletonInstance(PerformanceTrendPanel.class);
+        PerformanceTrendPanel panel = UiSingletonFactory.getInstance(PerformanceTrendPanel.class);
+        panel.setAvailableProtocols(EnumSet.of(PerformanceProtocol.HTTP, PerformanceProtocol.WEBSOCKET));
+        panel.setSize(new Dimension(1500, 700));
+        layoutRecursively(panel);
+
+        JToggleButton httpButton = findToggleButton(panel, PerformanceProtocolLabels.displayName(PerformanceProtocol.HTTP));
+        JCheckBox virtualUsersCheckBox = findCheckBox(
+                panel,
+                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_VIRTUAL_USERS)
+        );
+        JToggleButton separateButton = findToggleButton(
+                panel,
+                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_SEPARATE_CHARTS)
+        );
+
+        Rectangle httpBounds = boundsIn(panel, httpButton);
+        Rectangle virtualUsersBounds = boundsIn(panel, virtualUsersCheckBox);
+        Rectangle separateBounds = boundsIn(panel, separateButton);
+
+        assertTrue(
+                Math.abs(centerY(httpBounds) - centerY(separateBounds)) <= 4,
+                "chart mode switcher should stay in the same header row as the protocol switcher"
+        );
+        assertTrue(
+                virtualUsersBounds.y > httpBounds.y,
+                "metric checkboxes should live in the filter row below the protocol switcher"
+        );
+        assertTrue(separateBounds.x > httpBounds.x);
+    }
+
+    @Test
+    public void chineseViewModeLabelsShouldStayCompact() {
+        ResourceBundle zh = ResourceBundle.getBundle("messages", Locale.CHINESE);
+
+        assertEquals(zh.getString(MessageKeys.PERFORMANCE_TREND_SEPARATE_CHARTS), "分离");
+        assertEquals(zh.getString(MessageKeys.PERFORMANCE_TREND_COMBINED_CHART), "合并");
     }
 
     @Test
@@ -629,6 +760,15 @@ public class PerformanceTrendPanelTest extends AbstractSwingUiTest {
         return false;
     }
 
+    private static JCheckBox findCheckBox(Component root, String text) {
+        for (JCheckBox checkBox : findAll(root, JCheckBox.class)) {
+            if (text.equals(checkBox.getText())) {
+                return checkBox;
+            }
+        }
+        throw new AssertionError("Checkbox not found: " + text);
+    }
+
     private static int countVisibleCharts(Component root) {
         int count = 0;
         for (ChartPanel chartPanel : findAll(root, ChartPanel.class)) {
@@ -685,5 +825,22 @@ public class PerformanceTrendPanelTest extends AbstractSwingUiTest {
                 collect(child, type, matches);
             }
         }
+    }
+
+    private static void layoutRecursively(Container container) {
+        container.doLayout();
+        for (Component child : container.getComponents()) {
+            if (child instanceof Container childContainer) {
+                layoutRecursively(childContainer);
+            }
+        }
+    }
+
+    private static Rectangle boundsIn(Component root, Component component) {
+        return SwingUtilities.convertRectangle(component.getParent(), component.getBounds(), root);
+    }
+
+    private static int centerY(Rectangle rectangle) {
+        return rectangle.y + rectangle.height / 2;
     }
 }

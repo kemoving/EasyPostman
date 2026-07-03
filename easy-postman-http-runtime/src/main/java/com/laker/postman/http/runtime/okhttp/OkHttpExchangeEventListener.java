@@ -1,5 +1,7 @@
 package com.laker.postman.http.runtime.okhttp;
 
+import com.laker.postman.http.runtime.model.HttpCapturePolicy;
+import com.laker.postman.http.runtime.model.HttpCaptureProfiles;
 import com.laker.postman.http.runtime.model.HttpEventInfo;
 import com.laker.postman.http.runtime.model.PreparedRequest;
 import com.laker.postman.http.runtime.observation.NetworkLogEventStage;
@@ -10,6 +12,7 @@ import com.laker.postman.http.runtime.ssl.SSLCertificateValidator;
 import com.laker.postman.http.runtime.ssl.SSLConfigurationUtil;
 import com.laker.postman.http.runtime.ssl.SSLValidationResult;
 import com.laker.postman.http.runtime.transport.HttpExchangeTraceSupport;
+import com.laker.postman.request.model.HttpHeader;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 
@@ -46,17 +49,20 @@ public class OkHttpExchangeEventListener extends EventListener {
         // EventListener 可能在发起线程构造，真实 callStart 在 OkHttp 线程触发；ThreadLocal 只绑定真实回调线程。
         eventInfoThreadLocal.remove();
         HttpExchangeTraceSupport.bindToRequest(preparedRequest, info);
-        this.collectMetricsInfo = preparedRequest.collectMetricsInfo
-                || preparedRequest.collectEventInfo
-                || preparedRequest.enableNetworkLog;
-        this.collectEventInfo = preparedRequest.collectEventInfo;
-        this.enableNetworkLog = preparedRequest.enableNetworkLog;
+        HttpCapturePolicy capturePolicy = HttpCaptureProfiles.resolve(preparedRequest);
+        this.collectMetricsInfo = capturePolicy.collectMetrics();
+        this.collectEventInfo = capturePolicy.collectEventDetails();
+        this.enableNetworkLog = capturePolicy.emitNetworkLog();
     }
 
     /**
      * 发布网络日志事件（仅在 enableNetworkLog=true 时使用）。
      */
     private void log(NetworkLogEventStage stage, String msg) {
+        log(stage, msg, null);
+    }
+
+    private void log(NetworkLogEventStage stage, String msg, Long durationMs) {
         // 只有启用了网络日志才向外发布事件，具体展示由调用方注入的 sink 负责。
         if (!enableNetworkLog) {
             return;
@@ -64,7 +70,7 @@ public class OkHttpExchangeEventListener extends EventListener {
 
         long now = System.nanoTime();
         long elapsedMs = (now - callStartNanos) / 1_000_000;
-        NetworkLogSupport.append(preparedRequest, stage, msg, elapsedMs);
+        NetworkLogSupport.append(preparedRequest, stage, msg, elapsedMs, durationMs);
     }
 
     @Override
@@ -111,7 +117,8 @@ public class OkHttpExchangeEventListener extends EventListener {
                 sb.append(address.getHostName()).append(":").append(address.getPort()).append(" ");
             }
         }
-        log(NetworkLogEventStage.PROXY_SELECT_END, sb.toString());
+        log(NetworkLogEventStage.PROXY_SELECT_END, sb.toString(),
+                duration(info.getProxySelectStart(), info.getProxySelectEnd()));
     }
 
     @Override
@@ -129,7 +136,8 @@ public class OkHttpExchangeEventListener extends EventListener {
             return;
         }
         info.setDnsEnd(System.currentTimeMillis());
-        log(NetworkLogEventStage.DNS_END, domainName + " -> " + inetAddressList);
+        log(NetworkLogEventStage.DNS_END, domainName + " -> " + inetAddressList,
+                duration(info.getDnsStart(), info.getDnsEnd()));
     }
 
     @Override
@@ -281,9 +289,11 @@ public class OkHttpExchangeEventListener extends EventListener {
                     handshakeInfo.append("SSL certificate verify ok.\n");
                 }
 
-                log(NetworkLogEventStage.SECURE_CONNECT_END, handshakeInfo.toString());
+                log(NetworkLogEventStage.SECURE_CONNECT_END, handshakeInfo.toString(),
+                        duration(info.getSecureConnectStart(), info.getSecureConnectEnd()));
             } else {
-                log(NetworkLogEventStage.SECURE_CONNECT_END, "no handshake");
+                log(NetworkLogEventStage.SECURE_CONNECT_END, "no handshake",
+                        duration(info.getSecureConnectStart(), info.getSecureConnectEnd()));
             }
         } finally {
             CertificateCapturingSSLSocketFactory.clearLastCapturedCertificates();
@@ -297,7 +307,8 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         info.setConnectEnd(System.currentTimeMillis());
         info.setProtocol(protocol == null ? null : protocol.toString());
-        log(NetworkLogEventStage.CONNECT_END, inetSocketAddress + " via " + proxy.type() + ", protocol=" + protocol);
+        log(NetworkLogEventStage.CONNECT_END, inetSocketAddress + " via " + proxy.type() + ", protocol=" + protocol,
+                duration(info.getConnectStart(), info.getConnectEnd()));
     }
 
     @Override
@@ -307,7 +318,8 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         info.setConnectEnd(System.currentTimeMillis());
         info.setError(ioe);
-        log(NetworkLogEventStage.CONNECT_FAILED, inetSocketAddress + " via " + proxy.type() + ", protocol=" + protocol + ", error: " + ioe.getMessage());
+        log(NetworkLogEventStage.CONNECT_FAILED, inetSocketAddress + " via " + proxy.type() + ", protocol=" + protocol + ", error: " + ioe.getMessage(),
+                duration(info.getConnectStart(), info.getConnectEnd()));
     }
 
     @Override
@@ -329,7 +341,9 @@ public class OkHttpExchangeEventListener extends EventListener {
             info.setLocalAddress("无法获取");
             info.setRemoteAddress("无法获取");
         }
-        log(NetworkLogEventStage.CONNECTION_ACQUIRED, "Connection acquired: " + connection.toString() + ", local=" + info.getLocalAddress() + ", remote=" + info.getRemoteAddress());
+        boolean reused = info.getConnectStart() <= 0;
+        String label = reused ? "Connection reused" : "Connection acquired";
+        log(NetworkLogEventStage.CONNECTION_ACQUIRED, label + ": " + connection.toString() + ", local=" + info.getLocalAddress() + ", remote=" + info.getRemoteAddress());
     }
 
     @Override
@@ -338,7 +352,8 @@ public class OkHttpExchangeEventListener extends EventListener {
             return;
         }
         info.setConnectionReleased(System.currentTimeMillis());
-        log(NetworkLogEventStage.CONNECTION_RELEASED, "Connection released: " + connection.toString() + ", local=" + info.getLocalAddress() + ", remote=" + info.getRemoteAddress());
+        log(NetworkLogEventStage.CONNECTION_RELEASED, "Connection released: " + connection.toString() + ", local=" + info.getLocalAddress() + ", remote=" + info.getRemoteAddress(),
+                duration(info.getConnectionAcquired(), info.getConnectionReleased()));
     }
 
     @Override
@@ -361,12 +376,19 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         info.setHeaderBytesSent(headers.toString().getBytes(StandardCharsets.UTF_8).length);
         info.setRequestHeadersEnd(System.currentTimeMillis());
+        if (enableNetworkLog) {
+            log(NetworkLogEventStage.REQUEST_HEADERS_END, formatSentHeaders(),
+                    duration(info.getRequestHeadersStart(), info.getRequestHeadersEnd()));
+        }
     }
 
     @Override
     public void requestBodyStart(Call call) {
         if (collectMetricsInfo) {
             info.setRequestBodyStart(System.currentTimeMillis());
+            if (enableNetworkLog) {
+                log(NetworkLogEventStage.REQUEST_BODY_START, formatSentRequestBody());
+            }
         }
     }
 
@@ -377,7 +399,8 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         info.setBodyBytesSent(byteCount);
         info.setRequestBodyEnd(System.currentTimeMillis());
-        log(NetworkLogEventStage.REQUEST_BODY_END, "bytes=" + byteCount);
+        log(NetworkLogEventStage.REQUEST_BODY_END, "bytes=" + byteCount,
+                duration(info.getRequestBodyStart(), info.getRequestBodyEnd()));
     }
 
     @Override
@@ -450,9 +473,11 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         // 如果是重定向，使用橙色高亮
         if (isRedirect) {
-            log(NetworkLogEventStage.RESPONSE_HEADERS_END_REDIRECT, sb.toString());
+            log(NetworkLogEventStage.RESPONSE_HEADERS_END_REDIRECT, sb.toString(),
+                    duration(info.getResponseHeadersStart(), info.getResponseHeadersEnd()));
         } else {
-            log(NetworkLogEventStage.RESPONSE_HEADERS_END, sb.toString());
+            log(NetworkLogEventStage.RESPONSE_HEADERS_END, sb.toString(),
+                    duration(info.getResponseHeadersStart(), info.getResponseHeadersEnd()));
         }
     }
 
@@ -472,7 +497,8 @@ public class OkHttpExchangeEventListener extends EventListener {
         }
         info.setBodyBytesReceived(byteCount);
         info.setResponseBodyEnd(System.currentTimeMillis());
-        log(NetworkLogEventStage.RESPONSE_BODY_END, "bytes=" + byteCount);
+        log(NetworkLogEventStage.RESPONSE_BODY_END, "bytes=" + byteCount,
+                duration(info.getResponseBodyStart(), info.getResponseBodyEnd()));
     }
 
     @Override
@@ -565,6 +591,37 @@ public class OkHttpExchangeEventListener extends EventListener {
             sb.append("    at ").append(e.toString()).append("\n");
         }
         return sb.toString();
+    }
+
+    private String formatSentHeaders() {
+        if (preparedRequest.sentHeadersList == null || preparedRequest.sentHeadersList.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder("\n");
+        for (HttpHeader header : preparedRequest.sentHeadersList) {
+            if (header == null || header.getKey() == null) {
+                continue;
+            }
+            sb.append(header.getKey()).append(": ").append(header.getValue()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String formatSentRequestBody() {
+        if (preparedRequest.sentRequestBody == null) {
+            return "No request body";
+        }
+        if (preparedRequest.sentRequestBody.isEmpty()) {
+            return "Request body is empty";
+        }
+        return "\n" + preparedRequest.sentRequestBody;
+    }
+
+    private Long duration(long startMs, long endMs) {
+        if (startMs <= 0 || endMs <= 0 || endMs < startMs) {
+            return null;
+        }
+        return endMs - startMs;
     }
 
     /**

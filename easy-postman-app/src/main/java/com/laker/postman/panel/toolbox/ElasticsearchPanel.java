@@ -9,12 +9,13 @@ import com.laker.postman.common.component.ToolWindowSidebarHeader;
 import com.laker.postman.common.component.ToolWindowSidebarToolbar;
 import com.laker.postman.common.component.ToolWindowSurfaceStyle;
 import com.laker.postman.common.component.button.ClearButton;
+import com.laker.postman.common.component.button.CompactPrimaryButton;
 import com.laker.postman.common.component.button.CopyButton;
 import com.laker.postman.common.component.button.FormatButton;
 import com.laker.postman.common.component.button.PrimaryButton;
 import com.laker.postman.common.component.button.RefreshButton;
-import com.laker.postman.common.component.button.SecondaryButton;
 import com.laker.postman.common.component.connection.ConnectionToolbarUi;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.common.component.table.EnhancedTablePanel;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.http.runtime.okhttp.OkHttpClientManager;
@@ -23,7 +24,7 @@ import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.JsonUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.miginfocom.swing.MigLayout;
@@ -142,7 +143,7 @@ public class ElasticsearchPanel extends JPanel {
     private JTabbedPane resultTabs;
     private JLabel respStatusLabel;
     private JLabel hitsInfoLabel;
-    private PrimaryButton executeBtn;
+    private CompactPrimaryButton executeBtn;
 
     // ===== 请求历史 =====
     private static final int MAX_HISTORY = 20;
@@ -179,7 +180,6 @@ public class ElasticsearchPanel extends JPanel {
     private static final int HOST_FIELD_WIDTH = 280;
     private static final int AUTH_MODE_WIDTH = 100;
     private static final int AUTH_FIELD_WIDTH = HOST_FIELD_WIDTH;
-    private static final int CONNECTION_BUTTON_WIDTH = 78;
 
     // ===== 内置 DSL 模板 =====
     private static final String[][] DSL_TEMPLATES = {
@@ -312,15 +312,13 @@ public class ElasticsearchPanel extends JPanel {
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PASS_PLACEHOLDER));
         passwordField.addActionListener(e -> doConnect());
 
-        connectBtn = new SecondaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_CONNECT), "icons/connect.svg");
-        ConnectionToolbarUi.compactButton(connectBtn, CONNECTION_BUTTON_WIDTH);
-        connectBtn.addActionListener(e -> doConnect());
+        connectBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_CONNECT),
+                "icons/connect.svg", e -> doConnect());
 
-        disconnectBtn = new SecondaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_DISCONNECT), "icons/ws-close.svg");
-        ConnectionToolbarUi.compactButton(disconnectBtn, CONNECTION_BUTTON_WIDTH);
-        disconnectBtn.addActionListener(e -> doDisconnect());
+        disconnectBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_DISCONNECT),
+                "icons/ws-close.svg", e -> doDisconnect());
 
         // 用 CardLayout 将 connectBtn / disconnectBtn 叠放在同一格，切换时不留空白
         btnCardLayout = new CardLayout();
@@ -440,21 +438,21 @@ public class ElasticsearchPanel extends JPanel {
         ElasticsearchConnectionProfile profile = buildProfile(UUID.randomUUID().toString(), name);
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
-        NotificationUtil.showSuccess(MessageFormat.format(
+        NotificationCenter.showSuccess(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVED), profile.getName()));
     }
 
     private void saveCurrentConnectionProfile(boolean notify) {
         ElasticsearchConnectionProfile selectedProfile = getSelectedConnectionProfile();
         if (selectedProfile == null) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NOT_SELECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NOT_SELECTED));
             return;
         }
         ElasticsearchConnectionProfile profile = buildProfile(selectedProfile.getId(), selectedProfile.getName());
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
         if (notify) {
-            NotificationUtil.showSuccess(MessageFormat.format(
+            NotificationCenter.showSuccess(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVED), profile.getName()));
         }
     }
@@ -476,7 +474,7 @@ public class ElasticsearchPanel extends JPanel {
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
         if (notify) {
-            NotificationUtil.showSuccess(MessageFormat.format(
+            NotificationCenter.showSuccess(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVED), profile.getName()));
         }
     }
@@ -493,18 +491,18 @@ public class ElasticsearchPanel extends JPanel {
         ElasticsearchConnectionProfile profile = buildProfile(UUID.randomUUID().toString(), name);
         connectionProfileStore.upsertProfile(profile);
         loadSavedConnectionProfiles(profile.getId());
-        NotificationUtil.showSuccess(MessageFormat.format(
+        NotificationCenter.showSuccess(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVED), profile.getName()));
     }
 
     private void deleteSelectedConnectionProfile() {
         ElasticsearchConnectionProfile selectedProfile = getSelectedConnectionProfile();
         if (selectedProfile == null) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NOT_SELECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NOT_SELECTED));
             return;
         }
         if (isDefaultProfile(selectedProfile)) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_DEFAULT_NOT_DELETABLE));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_DEFAULT_NOT_DELETABLE));
             return;
         }
         int result = JOptionPane.showConfirmDialog(this,
@@ -519,7 +517,7 @@ public class ElasticsearchPanel extends JPanel {
         String deletedName = selectedProfile.getName();
         connectionProfileStore.deleteProfile(selectedProfile.getId());
         loadSavedConnectionProfiles(ElasticsearchConnectionProfileStore.DEFAULT_PROFILE_ID);
-        NotificationUtil.showInfo(MessageFormat.format(
+        NotificationCenter.showInfo(MessageFormat.format(
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_DELETED), deletedName));
     }
 
@@ -537,23 +535,14 @@ public class ElasticsearchPanel extends JPanel {
     }
 
     private String promptProfileName(String initialValue, String existingProfileId) {
-        Object value = JOptionPane.showInputDialog(this,
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVE_AS_PROMPT),
+        String name = TextInputDialog.showRequiredName(this,
                 I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_SAVE_AS_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                initialValue);
-        if (value == null) {
-            return null;
-        }
-        String name = value.toString().trim();
-        if (name.isBlank()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NAME_REQUIRED));
-            return null;
-        }
+                initialValue,
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NAME_REQUIRED)
+        ).orElse(null);
+        if (name == null) return null;
         if (profileNameExists(name, existingProfileId)) {
-            NotificationUtil.showWarning(MessageFormat.format(
+            NotificationCenter.showWarning(MessageFormat.format(
                     I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_PROFILE_NAME_EXISTS), name));
             return null;
         }
@@ -644,7 +633,8 @@ public class ElasticsearchPanel extends JPanel {
 
         JTabbedPane leftTabs = new JTabbedPane(SwingConstants.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
         ToolWindowSurfaceStyle.applyTabbedPaneCard(leftTabs);
-        leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_MANAGEMENT), buildIndexPanel());
+        leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_TAB), buildIndexPanel());
+        leftTabs.setToolTipTextAt(0, I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_MANAGEMENT));
         leftTabs.addTab(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_HISTORY), buildHistoryPanel());
 
         wrapper.add(leftTabs, BorderLayout.CENTER);
@@ -889,7 +879,7 @@ public class ElasticsearchPanel extends JPanel {
             if (primarySelected != null) {
                 Toolkit.getDefaultToolkit().getSystemClipboard()
                         .setContents(new StringSelection(primarySelected), null);
-                NotificationUtil.showSuccess(primarySelected);
+                NotificationCenter.showSuccess(primarySelected);
             }
         });
         menu.add(copyNameItem);
@@ -1019,11 +1009,9 @@ public class ElasticsearchPanel extends JPanel {
         templateCombo = new JComboBox<>();
         for (String[] t : DSL_TEMPLATES) templateCombo.addItem(I18nUtil.getMessage(t[0]));
         templateCombo.setPreferredSize(new Dimension(180, ConnectionToolbarUi.FORM_CONTROL_HEIGHT));
-        SecondaryButton loadTplBtn = new SecondaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_LOAD_TEMPLATE), "icons/load.svg");
-        ConnectionToolbarUi.compactButton(loadTplBtn, 104);
-        loadTplBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_LOAD_TEMPLATE));
-        loadTplBtn.addActionListener(e -> applyTemplate(templateCombo.getSelectedIndex()));
+        JButton loadTplBtn = ConnectionToolbarUi.iconButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_LOAD_TEMPLATE),
+                "icons/load.svg", e -> applyTemplate(templateCombo.getSelectedIndex()));
 
         FormatButton formatBtn = new FormatButton();
         formatBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_FORMAT_JSON));
@@ -1033,7 +1021,7 @@ public class ElasticsearchPanel extends JPanel {
         copyBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_COPY_RESULT));
         copyBtn.addActionListener(e -> {
             copyResult();
-            NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_RESULT_COPIED));
+            NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_RESULT_COPIED));
         });
         ClearButton clearBtn = new ClearButton();
         clearBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_CLEAR));
@@ -1067,9 +1055,9 @@ public class ElasticsearchPanel extends JPanel {
         // 路径框回车执行
         pathField.addActionListener(e -> executeRequest());
 
-        executeBtn = new PrimaryButton(
-                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_EXECUTE), "icons/send.svg");
-        ConnectionToolbarUi.compactButton(executeBtn, 72);
+        executeBtn = new CompactPrimaryButton(
+                I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_EXECUTE_SHORT), "icons/send.svg");
+        executeBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_EXECUTE));
         executeBtn.addActionListener(e -> executeRequest());
         registerCtrlEnterShortcut(executeBtn);
 
@@ -1265,16 +1253,16 @@ public class ElasticsearchPanel extends JPanel {
                     resultArea.setCaretPosition(0);
                     loadIndices();
                     if (finalTargets.size() == 1) {
-                        NotificationUtil.showSuccess(
+                        NotificationCenter.showSuccess(
                                 MessageFormat.format(I18nUtil.getMessage(singleSuccessKey), finalTargets.get(0)));
                     } else {
-                        NotificationUtil.showSuccess(
+                        NotificationCenter.showSuccess(
                                 MessageFormat.format(I18nUtil.getMessage(batchSuccessKey), finalTargets.size()));
                     }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (Exception ex) {
-                    NotificationUtil.showError(MessageFormat.format(
+                    NotificationCenter.showError(MessageFormat.format(
                             I18nUtil.getMessage(failedKey), ex.getMessage()));
                 }
             }
@@ -1284,7 +1272,7 @@ public class ElasticsearchPanel extends JPanel {
     private void doConnect() {
         String url = getCurrentHost();
         if (url.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_HOST_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_HOST_REQUIRED));
             return;
         }
         url = ElasticsearchConnectionProfileStore.normalizeBaseUrl(url);
@@ -1315,13 +1303,13 @@ public class ElasticsearchPanel extends JPanel {
                     resultArea.setCaretPosition(0);
                     addHostHistory(finalUrl);
                     loadIndices();
-                    NotificationUtil.showSuccess(MessageFormat.format(
+                    NotificationCenter.showSuccess(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_CONNECT_SUCCESS), finalUrl));
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (Exception ex) {
                     connected = false;
-                    NotificationUtil.showError(MessageFormat.format(
+                    NotificationCenter.showError(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_CONNECT_FAILED), ex.getMessage()));
                 }
             }
@@ -1336,7 +1324,7 @@ public class ElasticsearchPanel extends JPanel {
         indexListModel.clear();
         indexFilteredModel.clear();
         indexDocCountMap.clear();
-        NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_DISCONNECT_SUCCESS));
+        NotificationCenter.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_DISCONNECT_SUCCESS));
     }
 
     /**
@@ -1371,7 +1359,7 @@ public class ElasticsearchPanel extends JPanel {
                     parseAndFillIndexList(get());
                     filterIndices("");
                     if (indexListModel.isEmpty()) {
-                        NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_LIST_EMPTY));
+                        NotificationCenter.showInfo(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_LIST_EMPTY));
                     } else {
                         int restoreIndex = -1;
                         if (previousSelected != null && !previousSelected.isBlank()) {
@@ -1411,12 +1399,12 @@ public class ElasticsearchPanel extends JPanel {
 
     private void createIndex() {
         if (!connected) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_NOT_CONNECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_NOT_CONNECTED));
             return;
         }
         String name = newIndexField.getText().trim();
         if (name.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_NAME_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_NAME_REQUIRED));
             return;
         }
         int shards = (int) shardSpinner.getValue();
@@ -1436,12 +1424,12 @@ public class ElasticsearchPanel extends JPanel {
                     resultArea.setCaretPosition(0);
                     newIndexField.setText("");
                     loadIndices();
-                    NotificationUtil.showSuccess(
+                    NotificationCenter.showSuccess(
                             MessageFormat.format(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_CREATE_SUCCESS), name));
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (Exception ex) {
-                    NotificationUtil.showError(MessageFormat.format(
+                    NotificationCenter.showError(MessageFormat.format(
                             I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_INDEX_CREATE_FAILED), ex.getMessage()));
                 }
             }
@@ -1450,14 +1438,14 @@ public class ElasticsearchPanel extends JPanel {
 
     private void executeRequest() {
         if (!connected) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_NOT_CONNECTED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_NOT_CONNECTED));
             return;
         }
         String selectedMethod = (String) methodCombo.getSelectedItem();
         final String method = (selectedMethod == null) ? "GET" : selectedMethod;
         String path = normalizePath(pathField.getText().trim());
         if (path.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_PATH_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.TOOLBOX_ES_ERR_PATH_REQUIRED));
             return;
         }
         pathField.setText(path);

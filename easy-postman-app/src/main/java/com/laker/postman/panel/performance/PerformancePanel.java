@@ -1,19 +1,8 @@
 package com.laker.postman.panel.performance;
 
 import com.formdev.flatlaf.util.SystemFileChooser;
-import com.laker.postman.request.model.RequestItemProtocolEnum;
-import com.laker.postman.request.model.HttpRequestItem;
-
-
-import com.laker.postman.performance.core.model.NodeType;
-import com.laker.postman.performance.core.model.PerformanceProtocol;
-import com.laker.postman.performance.core.model.PerformanceRealtimeMetrics;
-import com.laker.postman.performance.core.model.PerformanceStatsCollector;
-import com.laker.postman.performance.core.model.PerformanceTrendWindowCollector;
-
-
-import com.laker.postman.common.UiSingletonPanel;
 import com.laker.postman.common.DebouncedSaveSupport;
+import com.laker.postman.common.UiSingletonPanel;
 import com.laker.postman.common.component.AppToolWindowChrome;
 import com.laker.postman.common.component.ToolWindowSurfaceStyle;
 import com.laker.postman.common.component.button.ExportButton;
@@ -21,6 +10,7 @@ import com.laker.postman.common.component.button.ImportButton;
 import com.laker.postman.common.component.button.RefreshButton;
 import com.laker.postman.common.component.button.StartButton;
 import com.laker.postman.common.component.button.StopButton;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.common.constants.AppConstants;
 import com.laker.postman.ioc.BeanFactory;
 import com.laker.postman.panel.collections.editor.request.RequestEditSubPanel;
@@ -35,12 +25,21 @@ import com.laker.postman.panel.performance.controller.ConditionPropertyPanel;
 import com.laker.postman.panel.performance.controller.LoopPropertyPanel;
 import com.laker.postman.panel.performance.controller.WhilePropertyPanel;
 import com.laker.postman.panel.performance.extractor.ExtractorPropertyPanel;
+import com.laker.postman.http.runtime.okhttp.HttpClientRuntimeConfig;
+import com.laker.postman.performance.core.model.NodeType;
+import com.laker.postman.performance.core.model.PerformanceProtocol;
+import com.laker.postman.performance.core.model.PerformanceRealtimeMetrics;
+import com.laker.postman.performance.core.model.PerformanceStatsCollector;
+import com.laker.postman.performance.core.model.PerformanceTrendWindowCollector;
+import com.laker.postman.performance.core.run.PerformanceRunPlan;
+import com.laker.postman.performance.core.run.PerformanceRunPlanJsonStorage;
+import com.laker.postman.performance.core.worker.PerformanceWorkerEndpoint;
+import com.laker.postman.performance.core.worker.PerformanceWorkerEndpointParser;
 import com.laker.postman.performance.execution.PerformanceExecutionConfig;
 import com.laker.postman.performance.model.PerformanceTreeNode;
 import com.laker.postman.performance.model.PerformanceResultListener;
 import com.laker.postman.performance.model.PerformanceStatsCollectorListener;
 import com.laker.postman.performance.model.PerformanceTrendWindowCollectorListener;
-import com.laker.postman.http.runtime.okhttp.HttpClientRuntimeConfig;
 import com.laker.postman.performance.plan.PerformancePlanConfiguration;
 import com.laker.postman.performance.plan.PerformancePlanDocument;
 import com.laker.postman.performance.plan.PerformancePlanImportResult;
@@ -49,30 +48,27 @@ import com.laker.postman.performance.plan.PerformancePlanWorkspace;
 import com.laker.postman.performance.plan.PerformanceRemoteWorkerSettings;
 import com.laker.postman.performance.plan.PerformanceRunPlanFactory;
 import com.laker.postman.performance.plan.PerformanceSavedPlan;
-import com.laker.postman.panel.performance.tree.PerformanceSwingTreePlanAdapter;
-import com.laker.postman.panel.performance.result.PerformanceReportPanel;
 import com.laker.postman.performance.result.PerformanceResultCollector;
+import com.laker.postman.performance.runtime.PerformanceExecutionEngine;
+import com.laker.postman.performance.runtime.PerformanceRunSession;
+import com.laker.postman.panel.performance.result.PerformanceReportPanel;
 import com.laker.postman.panel.performance.result.PerformanceResultTablePanel;
 import com.laker.postman.panel.performance.result.PerformanceResultTableVisualizer;
 import com.laker.postman.panel.performance.result.PerformanceTrendView;
-import com.laker.postman.performance.runtime.PerformanceExecutionEngine;
-import com.laker.postman.performance.runtime.PerformanceRunSession;
 import com.laker.postman.panel.performance.threadgroup.ThreadGroupPropertyPanel;
 import com.laker.postman.panel.performance.timer.TimerPropertyPanel;
-import com.laker.postman.performance.core.run.PerformanceRunPlan;
-import com.laker.postman.performance.core.run.PerformanceRunPlanJsonStorage;
-import com.laker.postman.performance.core.worker.PerformanceWorkerEndpoint;
-import com.laker.postman.performance.core.worker.PerformanceWorkerEndpointParser;
+import com.laker.postman.panel.performance.tree.PerformanceSwingTreePlanAdapter;
+import com.laker.postman.request.model.HttpRequestItem;
+import com.laker.postman.request.model.RequestItemProtocolEnum;
 import com.laker.postman.service.EnvironmentService;
 import com.laker.postman.service.GlobalVariablesService;
 import com.laker.postman.service.PerformancePersistenceService;
 import com.laker.postman.service.collections.RequestSaveEventPublisher;
-import com.laker.postman.http.runtime.okhttp.HttpClientRuntimeConfig;
 import com.laker.postman.service.setting.SettingManager;
 import com.laker.postman.util.FileChooserUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import com.laker.postman.util.SystemUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -84,6 +80,7 @@ import java.awt.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -346,30 +343,7 @@ public class PerformancePanel extends UiSingletonPanel {
         installPlanToolbarListeners();
         syncPlanSelectorItems();
 
-        JSplitPane verticalSplit = AppToolWindowChrome.createVerticalInnerSplitPane(
-                propertyPanel,
-                resultSection.resultPanel(),
-                260
-        );
-        verticalSplit.setResizeWeight(0.45);
-        verticalSplit.setDividerLocation(260);
-        propertyPanel.setMinimumSize(new Dimension(400, 150));
-        resultSection.resultPanel().setMinimumSize(new Dimension(400, 150));
-
-        JPanel rightContentPanel = new JPanel(new BorderLayout());
-        ToolWindowSurfaceStyle.applyCard(rightContentPanel);
-        rightContentPanel.add(topPanel, BorderLayout.NORTH);
-        rightContentPanel.add(verticalSplit, BorderLayout.CENTER);
-
-        treeSection.scrollPane().setMinimumSize(new Dimension(220, 150));
-        rightContentPanel.setMinimumSize(new Dimension(400, 300));
-        JSplitPane mainSplit = AppToolWindowChrome.createHorizontalInnerSplitPane(
-                treeSection.scrollPane(),
-                rightContentPanel,
-                AppToolWindowChrome.DEFAULT_SIDE_WIDTH
-        );
-        mainSplit.setResizeWeight(0.18);
-        add(AppToolWindowChrome.wrapToolWindow(mainSplit), BorderLayout.CENTER);
+        add(createWorkspaceSplitPane(treeSection, resultSection), BorderLayout.CENTER);
 
         List<PerformanceResultListener> resultListeners = List.of(
                 new PerformanceStatsCollectorListener(statsCollector),
@@ -387,6 +361,7 @@ public class PerformancePanel extends UiSingletonPanel {
                         remoteModeCheckBox,
                         workerEndpointsField,
                         planSelector,
+                        reportRefreshModeBox,
                         addPlanButton,
                         importBtn,
                         duplicatePlanButton,
@@ -447,6 +422,7 @@ public class PerformancePanel extends UiSingletonPanel {
         );
 
         treeSupport.syncAllRequestStructures((DefaultMutableTreeNode) treeModel.getRoot());
+        syncTrendAvailableProtocols();
         runBtn.addActionListener(e -> startRun(progressLabel, limitLabel));
         stopBtn.addActionListener(e -> stopRun());
         for (int i = 0; i < performanceTree.getRowCount(); i++) {
@@ -454,6 +430,50 @@ public class PerformancePanel extends UiSingletonPanel {
         }
         selectFirstThreadGroup();
         setupSaveShortcut();
+    }
+
+    private JSplitPane createWorkspaceSplitPane(PerformancePanelViewFactory.TreeSection treeSection,
+                                               PerformancePanelViewFactory.ResultSection resultSection) {
+        JComponent treeContentPanel = treeSection.contentPanel();
+        JComponent resultPanel = resultSection.resultPanel();
+        JSplitPane propertyResultSplit = createPropertyResultSplitPane(resultPanel);
+        JPanel rightContentPanel = createRightContentPanel(propertyResultSplit);
+
+        treeContentPanel.setMinimumSize(new Dimension(220, 150));
+        rightContentPanel.setMinimumSize(new Dimension(400, 300));
+
+        JSplitPane mainSplit = createPerformanceSplitPane(treeContentPanel, rightContentPanel);
+        mainSplit.setResizeWeight(0.18);
+        return mainSplit;
+    }
+
+    private JSplitPane createPropertyResultSplitPane(JComponent resultPanel) {
+        JSplitPane splitPane = AppToolWindowChrome.createVerticalInnerSplitPane(
+                propertyPanel,
+                resultPanel,
+                220
+        );
+        splitPane.setResizeWeight(0.34);
+        splitPane.setDividerLocation(220);
+        propertyPanel.setMinimumSize(new Dimension(400, 140));
+        resultPanel.setMinimumSize(new Dimension(400, 240));
+        return splitPane;
+    }
+
+    private JPanel createRightContentPanel(Component centerContent) {
+        JPanel panel = new JPanel(new BorderLayout());
+        ToolWindowSurfaceStyle.applyCard(panel);
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(centerContent, BorderLayout.CENTER);
+        return panel;
+    }
+
+    static JSplitPane createPerformanceSplitPane(Component treeContentPanel, Component contentPanel) {
+        return AppToolWindowChrome.createHorizontalCardSplitPane(
+                treeContentPanel,
+                contentPanel,
+                AppToolWindowChrome.DEFAULT_SIDE_WIDTH
+        );
     }
 
     public void switchWorkspaceAndRefreshUI() {
@@ -474,6 +494,7 @@ public class PerformancePanel extends UiSingletonPanel {
         DefaultMutableTreeNode root = loadPersistedOrDefaultRoot(persistedConfiguration, activePlanName());
         treeModel.setRoot(root);
         treeSupport.syncAllRequestStructures(root);
+        syncTrendAvailableProtocols();
         currentRequestNode = null;
         syncPlanSelectorItems();
         if (efficientCheckBox != null) {
@@ -674,29 +695,19 @@ public class PerformancePanel extends UiSingletonPanel {
         if (currentPlan == null) {
             return;
         }
-        Object value = JOptionPane.showInputDialog(
+        TextInputDialog.showRequiredName(
                 this,
-                I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_RENAME_PROMPT),
                 I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_RENAME_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                currentPlan.getName()
-        );
-        if (value == null) {
-            return;
-        }
-        String newName = value.toString().trim();
-        if (newName.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_NAME_EMPTY));
-            return;
-        }
-        saveCurrentPlanIntoMemory();
-        PerformanceSavedPlan latestPlan = activePlan();
-        replaceSavedPlan(currentPlan.getId(), (latestPlan == null ? currentPlan : latestPlan).withName(newName));
-        renameRootNode(newName);
-        syncPlanSelectorItems();
-        persistCurrentWorkspaceSync();
+                currentPlan.getName(),
+                I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_NAME_EMPTY)
+        ).ifPresent(newName -> {
+            saveCurrentPlanIntoMemory();
+            PerformanceSavedPlan latestPlan = activePlan();
+            replaceSavedPlan(currentPlan.getId(), (latestPlan == null ? currentPlan : latestPlan).withName(newName));
+            renameRootNode(newName);
+            syncPlanSelectorItems();
+            persistCurrentWorkspaceSync();
+        });
     }
 
     private void deletePlan() {
@@ -705,7 +716,7 @@ public class PerformancePanel extends UiSingletonPanel {
             return;
         }
         if (savedPlans.size() <= 1) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_DELETE_LAST_FORBIDDEN));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_DELETE_LAST_FORBIDDEN));
             return;
         }
         int result = JOptionPane.showConfirmDialog(
@@ -742,6 +753,7 @@ public class PerformancePanel extends UiSingletonPanel {
         DefaultMutableTreeNode root = loadPersistedOrDefaultRoot(configuration, activePlanName());
         treeModel.setRoot(root);
         treeSupport.syncAllRequestStructures(root);
+        syncTrendAvailableProtocols();
         currentRequestNode = null;
         updateOptionControlsFromState();
         clearCachedPerformanceResults();
@@ -902,7 +914,7 @@ public class PerformancePanel extends UiSingletonPanel {
         super.updateUI();
         // 主题切换时保持工具栏使用无分隔线的卡片内边距。
         if (topPanel != null) {
-            topPanel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+            PerformancePanelViewFactory.applyToolbarInsets(topPanel);
         }
     }
 
@@ -967,6 +979,7 @@ public class PerformancePanel extends UiSingletonPanel {
                 ensureRequestStructure(node, nodeData);
             }
         }
+        syncTrendAvailableProtocols();
     }
 
     /**
@@ -990,7 +1003,7 @@ public class PerformancePanel extends UiSingletonPanel {
         saveAllPropertyPanelData();
 
         persistenceService.saveWorkspace(currentWorkspaceSnapshot());
-        NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.PERFORMANCE_MSG_SAVE_SUCCESS));
+        NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.PERFORMANCE_MSG_SAVE_SUCCESS));
     }
 
     private void saveAllPropertyPanelData() {
@@ -1031,18 +1044,18 @@ public class PerformancePanel extends UiSingletonPanel {
             PerformancePlanImportResult importResult = planImportService.importPlans(selectedFile.toPath());
             int importedCount = appendImportedPlans(importResult);
             if (importedCount <= 0) {
-                NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_IMPORT_EMPTY));
+                NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_IMPORT_EMPTY));
                 return;
             }
             loadActivePlanIntoUi();
             persistCurrentWorkspaceSync();
-            NotificationUtil.showSuccess(I18nUtil.getMessage(
+            NotificationCenter.showSuccess(I18nUtil.getMessage(
                     MessageKeys.PERFORMANCE_PLAN_IMPORT_SUCCESS,
                     importedCount
             ));
         } catch (Exception ex) {
             log.error("Failed to import performance plan", ex);
-            NotificationUtil.showError(I18nUtil.getMessage(
+            NotificationCenter.showError(I18nUtil.getMessage(
                     MessageKeys.PERFORMANCE_PLAN_IMPORT_FAIL,
                     ex.getMessage()
             ));
@@ -1109,13 +1122,13 @@ public class PerformancePanel extends UiSingletonPanel {
                     AppConstants.APP_NAME + " " + SystemUtil.getCurrentVersion()
             );
             new PerformanceRunPlanJsonStorage().save(selectedFile.toPath(), runPlan);
-            NotificationUtil.showSuccess(I18nUtil.getMessage(
+            NotificationCenter.showSuccess(I18nUtil.getMessage(
                     MessageKeys.PERFORMANCE_RUN_PLAN_EXPORT_SUCCESS,
                     selectedFile.getAbsolutePath()
             ));
         } catch (Exception ex) {
             log.error("Failed to export performance run plan", ex);
-            NotificationUtil.showError(I18nUtil.getMessage(
+            NotificationCenter.showError(I18nUtil.getMessage(
                     MessageKeys.PERFORMANCE_RUN_PLAN_EXPORT_FAIL,
                     ex.getMessage()
             ));
@@ -1172,11 +1185,11 @@ public class PerformancePanel extends UiSingletonPanel {
         try {
             workers = PerformanceWorkerEndpointParser.parse(remoteSettings.getWorkerEndpoints());
         } catch (IllegalArgumentException ex) {
-            NotificationUtil.showError(ex.getMessage());
+            NotificationCenter.showError(ex.getMessage());
             return;
         }
         if (workers.isEmpty()) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_REQUIRED));
+            NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_REQUIRED));
             return;
         }
 
@@ -1205,7 +1218,7 @@ public class PerformancePanel extends UiSingletonPanel {
             runThread = remoteRunControlSupport.startRun(runPlan, workers, progressLabel, limitLabel);
         } catch (Exception ex) {
             log.error("Failed to start remote performance run", ex);
-            NotificationUtil.showError(I18nUtil.getMessage(
+            NotificationCenter.showError(I18nUtil.getMessage(
                     MessageKeys.PERFORMANCE_REMOTE_MSG_FAILED,
                     ex.getMessage()
             ));
@@ -1278,6 +1291,7 @@ public class PerformancePanel extends UiSingletonPanel {
      */
     private void saveConfig() {
         // 树节点编辑和属性面板变化都会触发保存，统一防抖减少频繁写盘。
+        syncTrendAvailableProtocols();
         autoSaveSupport.requestSave();
     }
 
@@ -1285,6 +1299,7 @@ public class PerformancePanel extends UiSingletonPanel {
         try {
             // 保存所有属性面板数据到树节点
             saveAllPropertyPanelData();
+            syncTrendAvailableProtocols();
             persistenceService.saveWorkspaceAsync(currentWorkspaceSnapshot());
         } catch (Exception e) {
             log.error("Failed to save performance config", e);
@@ -1347,6 +1362,7 @@ public class PerformancePanel extends UiSingletonPanel {
     }
 
     private void clearCachedPerformanceResults() {
+        syncTrendAvailableProtocols();
         if (statisticsCoordinator != null) {
             statisticsCoordinator.resetForNewRun();
         }
@@ -1402,6 +1418,20 @@ public class PerformancePanel extends UiSingletonPanel {
     private void syncTrendResultTabState() {
         if (trendCheckBox != null) {
             trendCheckBox.setSelected(trendEnabled);
+        }
+    }
+
+    private void syncTrendAvailableProtocols() {
+        if (performanceTrendPanel == null || treeSupport == null || treeModel == null) {
+            return;
+        }
+        Object root = treeModel.getRoot();
+        if (root instanceof DefaultMutableTreeNode rootNode) {
+            Set<PerformanceProtocol> availableProtocols = treeSupport.collectAvailableProtocols(rootNode);
+            performanceTrendPanel.setAvailableProtocols(availableProtocols);
+            if (performanceReportPanel != null) {
+                performanceReportPanel.setAvailableProtocols(availableProtocols);
+            }
         }
     }
 

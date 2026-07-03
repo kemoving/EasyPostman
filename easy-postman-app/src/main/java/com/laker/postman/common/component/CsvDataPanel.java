@@ -1,11 +1,14 @@
 package com.laker.postman.common.component;
 
+import com.laker.postman.common.component.notification.NotificationCenter;
+
 import cn.hutool.core.text.CharSequenceUtil;
 import com.formdev.flatlaf.util.SystemFileChooser;
 import com.laker.postman.common.UiSingletonFactory;
 import com.laker.postman.common.component.button.CSVButton;
 import com.laker.postman.common.component.button.CloseButton;
 import com.laker.postman.common.component.button.ModernButtonFactory;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.frame.MainFrame;
 import com.laker.postman.service.setting.SettingManager;
@@ -232,7 +235,7 @@ public class CsvDataPanel extends JPanel {
         csvHeaders = null;
         updateCsvStatus();
         notifyChangeListener();
-        NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.CSV_DATA_CLEARED));
+        NotificationCenter.showInfo(I18nUtil.getMessage(MessageKeys.CSV_DATA_CLEARED));
     }
 
     /**
@@ -360,7 +363,7 @@ public class CsvDataPanel extends JPanel {
                 List<String> headers = new ArrayList<>();
                 String headersText = headersField.getText().trim();
                 if (CharSequenceUtil.isBlank(headersText)) {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_HEADERS_REQUIRED));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_HEADERS_REQUIRED));
                     return;
                 }
 
@@ -374,14 +377,14 @@ public class CsvDataPanel extends JPanel {
                 }
 
                 if (headers.isEmpty()) {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_HEADERS_REQUIRED));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_HEADERS_REQUIRED));
                     return;
                 }
 
                 // 验证列数范围（从列标题自动计算）
                 int columnCount = headers.size();
                 if (columnCount > 50) {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_TOO_MANY_COLUMNS, columnCount));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.CSV_CREATE_MANUAL_TOO_MANY_COLUMNS, columnCount));
                     return;
                 }
 
@@ -740,14 +743,16 @@ public class CsvDataPanel extends JPanel {
                 I18nUtil.getMessage(MessageKeys.CSV_BUTTON_ADD_COLUMN), false, "icons/plus.svg", 16);
         styleToolbarButton(addColumnBtn);
         addColumnBtn.addActionListener(e -> {
-            String columnName = JOptionPane.showInputDialog(manageDialog, I18nUtil.getMessage(MessageKeys.CSV_ENTER_COLUMN_NAME),
-                    I18nUtil.getMessage(MessageKeys.CSV_ADD_COLUMN), JOptionPane.PLAIN_MESSAGE);
-            if (columnName != null && !columnName.trim().isEmpty()) {
-                columnName = columnName.trim();
+            TextInputDialog.showRequiredName(
+                    manageDialog,
+                    I18nUtil.getMessage(MessageKeys.CSV_ADD_COLUMN),
+                    "",
+                    I18nUtil.getMessage(MessageKeys.CSV_COLUMN_NAME_EMPTY)
+            ).ifPresent(columnName -> {
                 editTableModel.addColumn(columnName);
                 csvTable.repaint();
                 refreshResponsiveTableLayout(csvTable, scrollPane);
-            }
+            });
         });
 
         JButton deleteColumnBtn = ModernButtonFactory.createButton(
@@ -901,7 +906,7 @@ public class CsvDataPanel extends JPanel {
                 updateCsvStatus();
                 notifyChangeListener();
 
-                NotificationUtil.showSuccess(
+                NotificationCenter.showSuccess(
                         I18nUtil.getMessage(MessageKeys.CSV_DATA_SAVED, newCsvData.size(), currentHeaders.size()));
 
                 manageDialog.dispose();

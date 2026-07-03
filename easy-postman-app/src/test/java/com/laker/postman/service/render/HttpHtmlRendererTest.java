@@ -17,6 +17,7 @@ import java.util.Map;
 
 import static com.laker.postman.test.ThemeTokenTestSupport.remember;
 import static com.laker.postman.test.ThemeTokenTestSupport.restore;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -154,6 +155,103 @@ public class HttpHtmlRendererTest {
     }
 
     @Test
+    public void shouldRenderTimelinePhasesAsPeerRowsWithoutTreeGlyphs() {
+        HttpEventInfo eventInfo = new HttpEventInfo();
+        eventInfo.setCallStart(1_000L);
+        eventInfo.setDnsStart(1_010L);
+        eventInfo.setDnsEnd(1_020L);
+        eventInfo.setConnectStart(1_020L);
+        eventInfo.setSecureConnectStart(1_030L);
+        eventInfo.setSecureConnectEnd(1_050L);
+        eventInfo.setConnectEnd(1_050L);
+        eventInfo.setResponseHeadersStart(1_080L);
+        eventInfo.setCallEnd(1_100L);
+
+        HttpResponse response = new HttpResponse();
+        response.httpEventInfo = eventInfo;
+
+        String html = HttpHtmlRenderer.renderTimingInfo(response);
+
+        assertTrue(html.contains("DNS Lookup"));
+        assertTrue(html.contains("TCP Connect"));
+        assertTrue(html.contains("TLS Handshake"));
+        assertFalse(html.contains("↳"));
+        assertFalse(html.contains("SSL/TLS"));
+    }
+
+    @Test
+    public void shouldRenderTimelinePercentBesideBarTrack() {
+        HttpEventInfo eventInfo = new HttpEventInfo();
+        eventInfo.setCallStart(1_000L);
+        eventInfo.setDnsStart(1_000L);
+        eventInfo.setDnsEnd(1_025L);
+        eventInfo.setResponseHeadersStart(1_050L);
+        eventInfo.setCallEnd(1_100L);
+
+        HttpResponse response = new HttpResponse();
+        response.httpEventInfo = eventInfo;
+
+        String html = HttpHtmlRenderer.renderTimingInfo(response);
+
+        assertTrue(html.contains("<td width='88%' style='padding:0;'>"));
+        assertTrue(html.contains("<td width='12%' style='padding:0 0 0 6px;text-align:right;white-space:nowrap;"));
+        assertFalse(html.contains("</table><span style='color:"));
+    }
+
+    @Test
+    public void shouldRenderOtherPhaseSoDisplayedTimelineAddsUpToTotal() {
+        HttpEventInfo eventInfo = new HttpEventInfo();
+        eventInfo.setCallStart(1_000L);
+        eventInfo.setRequestHeadersStart(1_005L);
+        eventInfo.setRequestHeadersEnd(1_013L);
+        eventInfo.setResponseHeadersStart(1_275L);
+        eventInfo.setResponseBodyStart(1_279L);
+        eventInfo.setResponseBodyEnd(1_279L);
+        eventInfo.setCallEnd(1_279L);
+
+        HttpResponse response = new HttpResponse();
+        response.httpEventInfo = eventInfo;
+
+        String html = HttpHtmlRenderer.renderTimingInfo(response);
+
+        assertTrue(html.contains("Total"));
+        assertTrue(html.contains("279 ms"));
+        assertTrue(html.contains("Other"));
+        assertTrue(html.contains("4 ms"));
+        assertTrue(html.contains(">2%</td>"));
+        assertTrue(html.contains(">3%</td>"));
+        assertTrue(html.contains(">94%</td>"));
+        assertTrue(html.contains(">1%</td>"));
+    }
+
+    @Test
+    public void shouldCalculateTimelinePhasesWithoutNestedDoubleCounting() {
+        HttpEventInfo eventInfo = new HttpEventInfo();
+        eventInfo.setCallStart(1_000L);
+        eventInfo.setDnsStart(1_010L);
+        eventInfo.setDnsEnd(1_143L);
+        eventInfo.setConnectStart(1_143L);
+        eventInfo.setSecureConnectStart(1_173L);
+        eventInfo.setSecureConnectEnd(1_529L);
+        eventInfo.setConnectEnd(1_529L);
+        eventInfo.setRequestHeadersStart(1_530L);
+        eventInfo.setRequestHeadersEnd(1_533L);
+        eventInfo.setResponseHeadersStart(2_144L);
+        eventInfo.setResponseBodyStart(2_144L);
+        eventInfo.setResponseBodyEnd(2_144L);
+        eventInfo.setCallEnd(2_353L);
+
+        TimingCalculator calculator = new TimingCalculator(eventInfo);
+
+        assertEquals(calculator.getStalled(), 10L);
+        assertEquals(calculator.getDns(), 133L);
+        assertEquals(calculator.getConnect(), 30L);
+        assertEquals(calculator.getTls(), 356L);
+        assertEquals(calculator.getRequestSent(), 3L);
+        assertEquals(calculator.getServerCost(), 611L);
+    }
+
+    @Test
     public void shouldRenderConfiguredRequestWhenSentSnapshotMissing() {
         PreparedRequest request = new PreparedRequest();
         request.url = "https://example.test/api";
@@ -192,6 +290,23 @@ public class HttpHtmlRendererTest {
         assertTrue(html.contains("Sent Body"));
         assertTrue(html.contains("sent body"));
         assertFalse(html.contains("configured body"));
+    }
+
+    @Test
+    public void shouldPreferSentUrlAndMethodInRequestDetails() {
+        PreparedRequest request = new PreparedRequest();
+        request.url = "https://example.test/start";
+        request.method = "POST";
+        request.sentUrl = "https://example.test/target?trace=1";
+        request.sentMethod = "GET";
+        request.sentHeadersList = List.of(new HttpHeader(true, "Host", "example.test"));
+
+        String html = HttpHtmlRenderer.renderRequest(request);
+
+        assertTrue(html.contains("https://example.test/target?trace=1"));
+        assertTrue(html.contains("GET"));
+        assertFalse(html.contains("https://example.test/start"));
+        assertFalse(html.contains(">POST<"));
     }
 
     @Test

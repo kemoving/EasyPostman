@@ -1,5 +1,7 @@
 package com.laker.postman.panel.collections.tree.coordinator;
 
+import com.laker.postman.common.component.notification.NotificationCenter;
+
 import com.formdev.flatlaf.util.SystemFileChooser;
 import com.laker.postman.http.runtime.model.PreparedRequest;
 import com.laker.postman.collection.model.RequestGroup;
@@ -12,6 +14,7 @@ import com.laker.postman.request.model.HttpRequestItem;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONObject;
 import com.laker.postman.common.UiSingletonFactory;
+import com.laker.postman.common.component.dialog.TextInputDialog;
 import com.laker.postman.common.component.tab.ClosableTabComponent;
 import com.laker.postman.frame.MainFrame;
 import com.laker.postman.panel.collections.tree.CollectionTreePanel;
@@ -86,14 +89,12 @@ public class RequestTreeCoordinator {
     public void showAddGroupDialog(DefaultMutableTreeNode parentNode) {
         if (parentNode == null) return;
 
-        String groupName = JOptionPane.showInputDialog(
+        TextInputDialog.showRequiredName(
                 UiSingletonFactory.getInstance(MainFrame.class),
-                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_ADD_GROUP_PROMPT)
-        );
-
-        if (groupName != null && !groupName.trim().isEmpty()) {
-            addGroupToNode(parentNode, groupName);
-        }
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_ADD_GROUP_TITLE),
+                "",
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_GROUP_EMPTY)
+        ).ifPresent(groupName -> addGroupToNode(parentNode, groupName));
     }
 
     /**
@@ -190,24 +191,17 @@ public class RequestTreeCoordinator {
         }
         String oldName = group.getName();
 
-        Object result = JOptionPane.showInputDialog(
+        TextInputDialog.showRequiredName(
                 UiSingletonFactory.getInstance(MainFrame.class),
-                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_GROUP_PROMPT),
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_GROUP_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null, null, oldName
-        );
-
-        if (result != null) {
-            String newName = result.toString().trim();
-            if (!newName.isEmpty() && !newName.equals(oldName)) {
-                updateGroupName(selectedNode, group, newName);
-            } else if (newName.isEmpty()) {
-                NotificationUtil.showWarning(
-                        I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_GROUP_EMPTY)
-                );
+                oldName,
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_GROUP_EMPTY)
+        ).ifPresent(newName -> {
+            if (newName.equals(oldName)) {
+                return;
             }
-        }
+            updateGroupName(selectedNode, group, newName);
+        });
     }
 
     /**
@@ -230,24 +224,17 @@ public class RequestTreeCoordinator {
         }
         String oldName = item.getName();
 
-        Object result = JOptionPane.showInputDialog(
+        TextInputDialog.showRequiredName(
                 UiSingletonFactory.getInstance(MainFrame.class),
-                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_REQUEST_PROMPT),
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_REQUEST_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null, null, oldName
-        );
-
-        if (result != null) {
-            String newName = result.toString().trim();
-            if (!newName.isEmpty() && !newName.equals(oldName)) {
-                updateRequestName(selectedNode, item, newName);
-            } else if (newName.isEmpty()) {
-                NotificationUtil.showWarning(
-                        I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_REQUEST_EMPTY)
-                );
+                oldName,
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_REQUEST_EMPTY)
+        ).ifPresent(newName -> {
+            if (newName.equals(oldName)) {
+                return;
             }
-        }
+            updateRequestName(selectedNode, item, newName);
+        });
     }
 
     /**
@@ -293,24 +280,17 @@ public class RequestTreeCoordinator {
         }
         String oldName = savedResponse.getName();
 
-        Object result = JOptionPane.showInputDialog(
+        TextInputDialog.showRequiredName(
                 UiSingletonFactory.getInstance(MainFrame.class),
-                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_PROMPT),
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_TITLE),
-                JOptionPane.PLAIN_MESSAGE,
-                null, null, oldName
-        );
-
-        if (result != null) {
-            String newName = result.toString().trim();
-            if (!newName.isEmpty() && !newName.equals(oldName)) {
-                updateSavedResponseName(selectedNode, savedResponse, newName);
-            } else if (newName.isEmpty()) {
-                NotificationUtil.showWarning(
-                        I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_EMPTY)
-                );
+                oldName,
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_EMPTY)
+        ).ifPresent(newName -> {
+            if (newName.equals(oldName)) {
+                return;
             }
-        }
+            updateSavedResponseName(selectedNode, savedResponse, newName);
+        });
     }
 
     /**
@@ -487,7 +467,7 @@ public class RequestTreeCoordinator {
         }
 
         leftPanel.getCollectionTreePersistence().saveCurrentTree();
-        NotificationUtil.showSuccess(
+        NotificationCenter.showSuccess(
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_COPY_SUCCESS, copyInfos.size())
         );
     }
@@ -542,7 +522,7 @@ public class RequestTreeCoordinator {
         }
 
         if (!copiedRequests.isEmpty()) {
-            NotificationUtil.showSuccess(
+            NotificationCenter.showSuccess(
                     I18nUtil.getMessage(MessageKeys.COLLECTIONS_COPIED_TO_CLIPBOARD, copiedRequests.size())
             );
         }
@@ -565,7 +545,7 @@ public class RequestTreeCoordinator {
         requestTree.expandPath(new TreePath(targetParent.getPath()));
         leftPanel.getCollectionTreePersistence().saveCurrentTree();
 
-        NotificationUtil.showSuccess(
+        NotificationCenter.showSuccess(
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_PASTE_SUCCESS, copiedRequests.size())
         );
     }
@@ -623,11 +603,11 @@ public class RequestTreeCoordinator {
             Toolkit.getDefaultToolkit().getSystemClipboard()
                     .setContents(new StringSelection(curl), null);
 
-            NotificationUtil.showSuccess(
+            NotificationCenter.showSuccess(
                     I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_COPY_CURL_SUCCESS)
             );
         } catch (Exception ex) {
-            NotificationUtil.showError(
+            NotificationCenter.showError(
                     I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_COPY_CURL_FAIL, ex.getMessage())
             );
         }
@@ -692,10 +672,10 @@ public class RequestTreeCoordinator {
             JSONObject postmanCollection =
                     PostmanCollectionExporter.buildPostmanCollectionFromTreeNode(groupNode, groupName);
             FileUtil.writeUtf8String(postmanCollection.toStringPretty(), file);
-            NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_SUCCESS));
+            NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_SUCCESS));
         } catch (Exception ex) {
             log.error("Export Postman error", ex);
-            NotificationUtil.showError(
+            NotificationCenter.showError(
                     I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_FAIL, ex.getMessage())
             );
         }

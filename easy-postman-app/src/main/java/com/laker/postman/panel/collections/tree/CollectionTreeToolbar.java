@@ -34,9 +34,11 @@ import com.laker.postman.collection.importer.postman.PostmanCollectionParser;
 import com.laker.postman.service.swagger.SwaggerParser;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.IconUtil;
+import com.laker.postman.util.AsyncClipboardUtil;
+import com.laker.postman.util.ClipboardUtil;
 import com.laker.postman.util.FileChooserUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import com.laker.postman.service.curl.CurlImportUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,14 +50,11 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.laker.postman.panel.collections.tree.CollectionTreePanel.*;
 
@@ -93,9 +92,16 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
      * 点击 + 按钮弹出菜单：新建集合 + 分隔线 + 各种导入
      */
     private void showPlusMenu() {
-        // 先检测剪贴板是否有 cURL
-        String clipboardText = getClipboardText();
-        if (containsCurlCommands(clipboardText)) {
+        readClipboardCurlTextAsync()
+                .thenAccept(curlText -> SwingUtilities.invokeLater(() -> showPlusMenu(curlText)));
+    }
+
+    CompletableFuture<String> readClipboardCurlTextAsync() {
+        return ClipboardUtil.getClipboardCurlTextAsync();
+    }
+
+    private void showPlusMenu(String clipboardText) {
+        if (clipboardText != null) {
             int result = JOptionPane.showConfirmDialog(
                     UiSingletonFactory.getInstance(MainFrame.class),
                     I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_DETECTED),
@@ -178,18 +184,6 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
         menu.add(importCurl);
 
         return menu;
-    }
-
-    private String getClipboardText() {
-        try {
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            Transferable t = clipboard.getContents(null);
-            if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                return (String) t.getTransferData(DataFlavor.stringFlavor);
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     @Override
@@ -296,7 +290,7 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
 
                 leftPanel.getCollectionTreePersistence().saveCurrentTree();
                 leftPanel.getRequestTree().expandPath(new TreePath(easyPostmanGroup.getPath()));
-                NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
             } catch (Exception ex) {
                 log.error("Import error", ex);
                 JOptionPane.showMessageDialog(mainFrame,
@@ -327,13 +321,13 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
                     leftPanel.getTreeModel().reload();
                     leftPanel.getCollectionTreePersistence().saveCurrentTree();
                     leftPanel.getRequestTree().expandPath(new TreePath(collectionNode.getPath()));
-                    NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                    NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
                 } else {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_POSTMAN_INVALID));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_POSTMAN_INVALID));
                 }
             } catch (Exception ex) {
                 log.error("Import error", ex);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
             }
         }
     }
@@ -356,13 +350,13 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
                     leftPanel.getTreeModel().reload();
                     leftPanel.getCollectionTreePersistence().saveCurrentTree();
                     leftPanel.getRequestTree().expandPath(new TreePath(collectionNode.getPath()));
-                    NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                    NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
                 } else {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HAR_INVALID));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HAR_INVALID));
                 }
             } catch (Exception ex) {
                 log.error("Import HAR error", ex);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
             }
         }
     }
@@ -391,13 +385,13 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
                     // 导入环境变量
                     importEnvironmentsFromParseResult(parseResult);
 
-                    NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                    NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
                 } else {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SWAGGER_INVALID));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SWAGGER_INVALID));
                 }
             } catch (Exception ex) {
                 log.error("Import Swagger error", ex);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
             }
         }
     }
@@ -462,13 +456,13 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
                     leftPanel.getTreeModel().reload();
                     leftPanel.getCollectionTreePersistence().saveCurrentTree();
                     leftPanel.getRequestTree().expandPath(new TreePath(collectionNode.getPath()));
-                    NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                    NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
                 } else {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HTTP_INVALID));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HTTP_INVALID));
                 }
             } catch (Exception ex) {
                 log.error("Import HTTP file error", ex);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
             }
         }
     }
@@ -499,13 +493,13 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
 
                     importEnvironmentsFromParseResult(parseResult);
 
-                    NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
+                    NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SUCCESS));
                 } else {
-                    NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_APIPOST_INVALID));
+                    NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_APIPOST_INVALID));
                 }
             } catch (Exception ex) {
                 log.error("Import ApiPost error", ex);
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_FAIL, ex.getMessage()));
             }
         }
     }
@@ -520,7 +514,7 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
         try {
             CurlImportResult importResult = parseCurlImport(curlText);
             if (importResult.items().isEmpty()) {
-                NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_PARSE_FAIL));
+                NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_PARSE_FAIL));
                 return;
             }
 
@@ -534,11 +528,11 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
 
             // 导入成功后清空剪贴板
             if (saved) {
-                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(""), null);
+                AsyncClipboardUtil.clearStringAsync();
                 notifyCurlImportResult(importResult);
             }
         } catch (Exception ex) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_PARSE_ERROR, ex.getMessage()));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_PARSE_ERROR, ex.getMessage()));
         }
     }
 
@@ -582,14 +576,14 @@ public class CollectionTreeToolbar extends UiSingletonPanel {
             return;
         }
         if (importResult.failedCount() > 0) {
-            NotificationUtil.showWarning(I18nUtil.getMessage(
+            NotificationCenter.showWarning(I18nUtil.getMessage(
                     MessageKeys.COLLECTIONS_IMPORT_CURL_BATCH_PARTIAL,
                     importResult.items().size(),
                     importResult.failedCount()
             ));
             return;
         }
-        NotificationUtil.showSuccess(I18nUtil.getMessage(
+        NotificationCenter.showSuccess(I18nUtil.getMessage(
                 MessageKeys.COLLECTIONS_IMPORT_CURL_BATCH_SUCCESS,
                 importResult.items().size()
         ));

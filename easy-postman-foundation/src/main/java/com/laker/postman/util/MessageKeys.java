@@ -60,6 +60,8 @@ public final class MessageKeys {
     public static final String UPDATE_NO_INSTALLER_FOUND = "update.no_installer_found";
     public static final String UPDATE_WHATS_NEW = "update.whats_new";
     public static final String UPDATE_SAVE_TIP = "update.save_tip";
+    public static final String UPDATE_VERSION_PREFIX = "update.version_prefix";
+    public static final String UPDATE_RELEASED_ON = "update.released_on";
     public static final String UPDATE_NO_CHANGELOG = "update.no_changelog";
     public static final String UPDATE_DEFAULT_CHANGELOG = "update.default_changelog";
     public static final String UPDATE_CODE_EXAMPLE = "update.code_example";
@@ -77,6 +79,11 @@ public final class MessageKeys {
     public static final String UPDATE_AVAILABLE_NO_ASSET = "update.available_no_asset";
     public static final String UPDATE_AVAILABLE_NO_ASSET_TITLE = "update.available_no_asset.title";
     public static final String UPDATE_AVAILABLE_NO_ASSET_GO_GITHUB = "update.available_no_asset.go_github";
+    public static final String UPDATE_AVAILABLE_NO_ASSET_HINT = "update.available_no_asset.hint";
+    public static final String UPDATE_AVAILABLE_NO_ASSET_TIP = "update.available_no_asset.tip";
+    public static final String UPDATE_NOTIFICATION_NO_ASSET_DESCRIPTION = "update.notification.no_asset_description";
+    public static final String UPDATE_NOTIFICATION_VIEW_DETAILS_DESCRIPTION = "update.notification.view_details_description";
+    public static final String UPDATE_NOTIFICATION_DEFAULT_DESCRIPTION = "update.notification.default_description";
     // ============ 更新日志相关 ============
     public static final String CHANGELOG_TITLE = "changelog.title";
     public static final String CHANGELOG_CURRENT_VERSION = "changelog.current_version";
@@ -87,6 +94,10 @@ public final class MessageKeys {
     public static final String CHANGELOG_VIEW_ON_GITEE = "changelog.view_on_gitee";
     public static final String CHANGELOG_CLOSE = "changelog.close";
     public static final String CHANGELOG_REFRESH = "changelog.refresh";
+    public static final String CHANGELOG_VIEW_ON_GITHUB_TOOLTIP = "changelog.view_on_github.tooltip";
+    public static final String CHANGELOG_VIEW_ON_GITEE_TOOLTIP = "changelog.view_on_gitee.tooltip";
+    public static final String CHANGELOG_NO_NOTES = "changelog.no_notes";
+    public static final String CHANGELOG_UNKNOWN_DATE = "changelog.unknown_date";
 
     public static final String MEMORY_TUNING_TITLE = "memory_tuning.title";
     public static final String MEMORY_TUNING_CONTENT = "memory_tuning.content";
@@ -360,6 +371,11 @@ public final class MessageKeys {
     public static final String TAB_UNSAVED_CHANGES_TITLE = "tab.unsaved_changes.title";
     public static final String TAB_CLOSE_CURRENT = "tab.close_current";
     public static final String SAVED_RESPONSE_READONLY = "saved_response.readonly";
+    public static final String SAVED_RESPONSE_ORIGINAL_BODY_TRUNCATED = "saved_response.original_body_truncated";
+    public static final String NETWORK_LOG_COPY_ACTUAL_CURL = "network_log.copy_actual_curl";
+    public static final String NETWORK_LOG_COPY_ACTUAL_CURL_TOOLTIP = "network_log.copy_actual_curl.tooltip";
+    public static final String NETWORK_LOG_COPY_ACTUAL_CURL_SUCCESS = "network_log.copy_actual_curl.success";
+    public static final String NETWORK_LOG_COPY_ACTUAL_CURL_FAIL = "network_log.copy_actual_curl.fail";
 
     // ============ Bulk Edit 相关 ============
     public static final String BULK_EDIT = "bulk.edit";
@@ -378,6 +394,16 @@ public final class MessageKeys {
     public static final String VARIABLE_TYPE_GLOBAL = "variable.type.global";
     public static final String VARIABLE_TYPE_BUILT_IN = "variable.type.built_in";
     public static final String VARIABLE_TYPE_UNDEFINED = "variable.type.undefined";
+    public static final String REQUEST_ASSISTANT_COLLAPSE = "request.assistant.collapse";
+    public static final String REQUEST_ASSISTANT_CODE_SNIPPET_TITLE = "request.assistant.code_snippet.title";
+    public static final String REQUEST_ASSISTANT_CODE_COPIED = "request.assistant.code_snippet.copied";
+    public static final String REQUEST_ASSISTANT_VARIABLES_TITLE = "request.assistant.variables.title";
+    public static final String REQUEST_ASSISTANT_VARIABLES_EMPTY = "request.assistant.variables.empty";
+    public static final String REQUEST_ASSISTANT_VARIABLES_HINT = "request.assistant.variables.hint";
+    public static final String REQUEST_ASSISTANT_USED_VARIABLES = "request.assistant.variables.used";
+    public static final String REQUEST_ASSISTANT_ALL_VARIABLES = "request.assistant.variables.all";
+    public static final String REQUEST_ASSISTANT_UNDEFINED_VARIABLES = "request.assistant.variables.undefined";
+    public static final String REQUEST_ASSISTANT_VARIABLE_UNRESOLVED = "request.assistant.variables.unresolved";
 
     // ============ 快捷键设置 ============
     public static final String SHORTCUT_SETTINGS_TITLE = "shortcut.settings.title";
@@ -441,11 +467,13 @@ public final class MessageKeys {
     public static final String AUTH_TYPE_LABEL = "auth.type.label";
     public static final String AUTH_TYPE_INHERIT = "auth.type.inherit";
     public static final String AUTH_TYPE_NONE = "auth.type.none";
+    public static final String AUTH_TYPE_API_KEY = "auth.type.api_key";
     public static final String AUTH_TYPE_BASIC = "auth.type.basic";
     public static final String AUTH_TYPE_BEARER = "auth.type.bearer";
     public static final String AUTH_TYPE_DIGEST = "auth.type.digest";
     public static final String AUTH_TYPE_INHERIT_DESC = "auth.type.inherit.desc";
     public static final String AUTH_TYPE_NONE_DESC = "auth.type.none.desc";
+    public static final String AUTH_TYPE_API_KEY_DESC = "auth.type.api_key.desc";
     public static final String AUTH_TYPE_BASIC_DESC = "auth.type.basic.desc";
     public static final String AUTH_TYPE_BEARER_DESC = "auth.type.bearer.desc";
     public static final String AUTH_TYPE_DIGEST_DESC = "auth.type.digest.desc";
@@ -453,6 +481,13 @@ public final class MessageKeys {
     public static final String AUTH_PASSWORD = "auth.password";
     public static final String AUTH_TOKEN = "auth.token";
     public static final String AUTH_TOKEN_PLACEHOLDER = "auth.token.placeholder";
+    public static final String AUTH_API_KEY_NAME = "auth.api_key.name";
+    public static final String AUTH_API_KEY_VALUE = "auth.api_key.value";
+    public static final String AUTH_API_KEY_ADD_TO = "auth.api_key.add_to";
+    public static final String AUTH_API_KEY_ADD_TO_HEADER = "auth.api_key.add_to.header";
+    public static final String AUTH_API_KEY_ADD_TO_QUERY_PARAMS = "auth.api_key.add_to.query_params";
+    public static final String AUTH_API_KEY_NAME_PLACEHOLDER = "auth.api_key.name.placeholder";
+    public static final String AUTH_API_KEY_VALUE_PLACEHOLDER = "auth.api_key.value.placeholder";
 
     // ============ Cookie相关 ============
     public static final String COOKIES_TITLE = "cookies.title";
@@ -519,10 +554,8 @@ public final class MessageKeys {
     public static final String ENV_DIALOG_IMPORT_INTELLIJ_FAIL = "env.dialog.import_intellij.fail";
     public static final String ENV_DIALOG_IMPORT_INTELLIJ_INVALID = "env.dialog.import_intellij.invalid";
     public static final String ENV_DIALOG_ADD_TITLE = "env.dialog.add.title";
-    public static final String ENV_DIALOG_ADD_PROMPT = "env.dialog.add.prompt";
     public static final String ENV_DIALOG_RENAME_TITLE = "env.dialog.rename.title";
-    public static final String ENV_DIALOG_RENAME_PROMPT = "env.dialog.rename.prompt";
-    public static final String ENV_DIALOG_RENAME_FAIL = "env.dialog.rename.fail";
+    public static final String ENV_DIALOG_NAME_EMPTY = "env.dialog.name.empty";
     public static final String ENV_DIALOG_DELETE_TITLE = "env.dialog.delete.title";
     public static final String ENV_DIALOG_DELETE_PROMPT = "env.dialog.delete.prompt";
     public static final String ENV_DIALOG_DELETE_BATCH_PROMPT = "env.dialog.delete.batch_prompt";
@@ -579,11 +612,13 @@ public final class MessageKeys {
     public static final String WORKSPACE_GIT_PUSH = "workspace.git.push";
     public static final String WORKSPACE_GIT_COMMIT = "workspace.git.commit";
     public static final String WORKSPACE_GIT_HISTORY = "workspace.git.history";
+    public static final String WORKSPACE_GIT_DIFF = "workspace.git.diff";
+    public static final String WORKSPACE_GIT_BRANCHES = "workspace.git.branches";
     public static final String WORKSPACE_GIT_AUTH_UPDATE = "workspace.git.auth.update";
     public static final String WORKSPACE_GIT_AUTH_UPDATE_SUCCESS = "workspace.git.auth.update.success";
     public static final String WORKSPACE_GIT_AUTH_UPDATE_FAILED = "workspace.git.auth.update.failed";
 
-    // Git History Dialog
+    // Git History
     public static final String GIT_HISTORY_TITLE = "git.history.title";
     public static final String GIT_HISTORY_COMMIT_ID = "git.history.commit.id";
     public static final String GIT_HISTORY_MESSAGE = "git.history.message";
@@ -598,7 +633,90 @@ public final class MessageKeys {
     public static final String GIT_HISTORY_RESTORE_SUCCESS = "git.history.restore.success";
     public static final String GIT_HISTORY_RESTORE_FAILED = "git.history.restore.failed";
     public static final String GIT_HISTORY_COMMIT_DETAILS = "git.history.commit.details";
+    public static final String GIT_HISTORY_DETAILS_LOADING = "git.history.details.loading";
+    public static final String GIT_HISTORY_RESTORING = "git.history.restoring";
+    public static final String GIT_HISTORY_SELECT_COMMIT = "git.history.select_commit";
+    public static final String GIT_HISTORY_LOAD_FAILED = "git.history.load.failed";
+    public static final String GIT_HISTORY_DETAILS_FAILED = "git.history.details.failed";
     public static final String GIT_HISTORY_CLOSE = "git.history.close";
+
+    // Git Diff Dialog
+    public static final String GIT_DIFF_TITLE = "git.diff.title";
+    public static final String GIT_DIFF_LOADING = "git.diff.loading";
+    public static final String GIT_DIFF_LOADING_FILE = "git.diff.loading.file";
+    public static final String GIT_DIFF_NO_CHANGES = "git.diff.no_changes";
+    public static final String GIT_DIFF_NO_TEXT_DIFF = "git.diff.no_text_diff";
+    public static final String GIT_DIFF_SELECT_FILE = "git.diff.select_file";
+    public static final String GIT_DIFF_LOAD_FAILED = "git.diff.load_failed";
+    public static final String GIT_DIFF_STATUS_COUNT = "git.diff.status.count";
+    public static final String GIT_DIFF_CLOSE = "git.diff.close";
+    public static final String GIT_DIFF_TYPE_ADDED = "git.diff.type.added";
+    public static final String GIT_DIFF_TYPE_MODIFIED = "git.diff.type.modified";
+    public static final String GIT_DIFF_TYPE_DELETED = "git.diff.type.deleted";
+    public static final String GIT_DIFF_TYPE_UNTRACKED = "git.diff.type.untracked";
+    public static final String GIT_DIFF_TYPE_CONFLICTING = "git.diff.type.conflicting";
+    public static final String GIT_DIFF_SUMMARY_STAGED = "git.diff.summary.staged";
+    public static final String GIT_DIFF_SUMMARY_UNSTAGED = "git.diff.summary.unstaged";
+    public static final String GIT_DIFF_SUMMARY_FILE_CHANGED = "git.diff.summary.file_changed";
+    public static final String GIT_DIFF_SUMMARY_FILES_CHANGED = "git.diff.summary.files_changed";
+    public static final String GIT_DIFF_SUMMARY_INSERTION = "git.diff.summary.insertion";
+    public static final String GIT_DIFF_SUMMARY_INSERTIONS = "git.diff.summary.insertions";
+    public static final String GIT_DIFF_SUMMARY_DELETION = "git.diff.summary.deletion";
+    public static final String GIT_DIFF_SUMMARY_DELETIONS = "git.diff.summary.deletions";
+    public static final String GIT_DIFF_TRUNCATED_NOTICE = "git.diff.truncated_notice";
+    public static final String GIT_DIFF_LARGE_SKIPPED_NOTICE = "git.diff.large_skipped_notice";
+    public static final String GIT_DIFF_LARGE_UNTRACKED_SKIPPED_NOTICE = "git.diff.large_untracked_skipped_notice";
+    public static final String GIT_DIFF_SIZE_HEAD = "git.diff.size.head";
+    public static final String GIT_DIFF_SIZE_STAGED = "git.diff.size.staged";
+    public static final String GIT_DIFF_SIZE_WORKTREE = "git.diff.size.worktree";
+    public static final String GIT_WORKSPACE_REPOSITORY_MISSING = "git.workspace.repository_missing";
+
+    // Git Branch Dialog
+    public static final String GIT_BRANCH_TITLE = "git.branch.title";
+    public static final String GIT_BRANCH_BRANCH = "git.branch.branch";
+    public static final String GIT_BRANCH_TYPE = "git.branch.type";
+    public static final String GIT_BRANCH_TRACKING = "git.branch.tracking";
+    public static final String GIT_BRANCH_STATUS = "git.branch.status";
+    public static final String GIT_BRANCH_LOCAL = "git.branch.local";
+    public static final String GIT_BRANCH_REMOTE = "git.branch.remote";
+    public static final String GIT_BRANCH_NO_TRACKING = "git.branch.no_tracking";
+    public static final String GIT_BRANCH_REMOTE_ONLY = "git.branch.remote_only";
+    public static final String GIT_BRANCH_CURRENT = "git.branch.current";
+    public static final String GIT_BRANCH_LOADING = "git.branch.loading";
+    public static final String GIT_BRANCH_NO_BRANCHES = "git.branch.no_branches";
+    public static final String GIT_BRANCH_SWITCH = "git.branch.switch";
+    public static final String GIT_BRANCH_SWITCHING = "git.branch.switching";
+    public static final String GIT_BRANCH_SWITCH_SUCCESS = "git.branch.switch.success";
+    public static final String GIT_BRANCH_SWITCH_FAILED = "git.branch.switch.failed";
+    public static final String GIT_BRANCH_REFRESH = "git.branch.refresh";
+    public static final String GIT_BRANCH_FETCH = "git.branch.fetch";
+    public static final String GIT_BRANCH_FETCHING = "git.branch.fetching";
+    public static final String GIT_BRANCH_FETCH_SUCCESS = "git.branch.fetch.success";
+    public static final String GIT_BRANCH_FETCH_FAILED = "git.branch.fetch.failed";
+    public static final String GIT_BRANCH_CREATE = "git.branch.create";
+    public static final String GIT_BRANCH_CREATE_TITLE = "git.branch.create.title";
+    public static final String GIT_BRANCH_CREATING = "git.branch.creating";
+    public static final String GIT_BRANCH_CREATE_SUCCESS = "git.branch.create.success";
+    public static final String GIT_BRANCH_CREATE_FAILED = "git.branch.create.failed";
+    public static final String GIT_BRANCH_PUBLISH = "git.branch.publish";
+    public static final String GIT_BRANCH_PUBLISHING = "git.branch.publishing";
+    public static final String GIT_BRANCH_PUBLISH_SUCCESS = "git.branch.publish.success";
+    public static final String GIT_BRANCH_PUBLISH_FAILED = "git.branch.publish.failed";
+    public static final String GIT_BRANCH_PUBLISH_CURRENT_ONLY = "git.branch.publish.current_only";
+    public static final String GIT_BRANCH_DELETE = "git.branch.delete";
+    public static final String GIT_BRANCH_DELETE_CONFIRM = "git.branch.delete.confirm";
+    public static final String GIT_BRANCH_DELETE_UNMERGED_TITLE = "git.branch.delete.unmerged.title";
+    public static final String GIT_BRANCH_DELETE_UNMERGED_CONFIRM = "git.branch.delete.unmerged.confirm";
+    public static final String GIT_BRANCH_DELETE_UNMERGED_STATUS = "git.branch.delete.unmerged.status";
+    public static final String GIT_BRANCH_DELETING = "git.branch.deleting";
+    public static final String GIT_BRANCH_DELETE_SUCCESS = "git.branch.delete.success";
+    public static final String GIT_BRANCH_DELETE_FAILED = "git.branch.delete.failed";
+    public static final String GIT_BRANCH_SELECT_TO_SWITCH = "git.branch.select_to_switch";
+    public static final String GIT_BRANCH_CURRENT_SELECTED = "git.branch.current_selected";
+    public static final String GIT_BRANCH_READY_TO_SWITCH = "git.branch.ready_to_switch";
+    public static final String GIT_BRANCH_NO_REMOTE = "git.branch.no_remote";
+    public static final String GIT_BRANCH_CLOSE = "git.branch.close";
+
     public static final String WORKSPACE_VALIDATION_NAME_REQUIRED = "workspace.validation.name.required";
     public static final String WORKSPACE_VALIDATION_PATH_REQUIRED = "workspace.validation.path.required";
     public static final String WORKSPACE_VALIDATION_GIT_URL_REQUIRED = "workspace.validation.git.url.required";
@@ -697,7 +815,6 @@ public final class MessageKeys {
     public static final String PERFORMANCE_PLAN_RENAME_TOOLTIP = "performance.plan.rename.tooltip";
     public static final String PERFORMANCE_PLAN_DELETE_TOOLTIP = "performance.plan.delete.tooltip";
     public static final String PERFORMANCE_PLAN_RENAME_TITLE = "performance.plan.rename.title";
-    public static final String PERFORMANCE_PLAN_RENAME_PROMPT = "performance.plan.rename.prompt";
     public static final String PERFORMANCE_PLAN_NAME_EMPTY = "performance.plan.name.empty";
     public static final String PERFORMANCE_PLAN_COPY_SUFFIX = "performance.plan.copy_suffix";
     public static final String PERFORMANCE_PLAN_DELETE_CONFIRM = "performance.plan.delete.confirm";
@@ -829,7 +946,7 @@ public final class MessageKeys {
     public static final String PERFORMANCE_MENU_COPY = "performance.menu.copy";
     public static final String PERFORMANCE_MENU_PASTE = "performance.menu.paste";
     public static final String PERFORMANCE_MSG_SELECT_THREAD_GROUP = "performance.msg.select_thread_group";
-    public static final String PERFORMANCE_MSG_RENAME_NODE = "performance.msg.rename_node";
+    public static final String PERFORMANCE_NODE_NAME_EMPTY = "performance.node.name.empty";
     public static final String PERFORMANCE_MSG_EXECUTION_INTERRUPTED = "performance.msg.execution_interrupted";
     public static final String PERFORMANCE_MSG_EXECUTION_COMPLETED = "performance.msg.execution_completed";
     public static final String PERFORMANCE_MSG_PRE_SCRIPT_FAILED = "performance.msg.pre_script_failed";
@@ -973,6 +1090,7 @@ public final class MessageKeys {
     public static final String PERFORMANCE_TREND_COMBINED_CHART = "performance.trend.combined_chart";
     public static final String PERFORMANCE_TREND_SEPARATE_CHARTS = "performance.trend.separate_charts";
     public static final String PERFORMANCE_TREND_METRICS = "performance.trend.metrics";
+    public static final String PERFORMANCE_TREND_METRIC_FILTERS = "performance.trend.metric_filters";
     public static final String PERFORMANCE_TREND_PLACEHOLDER_TITLE = "performance.trend.placeholder.title";
     public static final String PERFORMANCE_TREND_PLACEHOLDER_HINT = "performance.trend.placeholder.hint";
     public static final String PERFORMANCE_TREND_OVERVIEW = "performance.trend.overview";
@@ -1007,8 +1125,6 @@ public final class MessageKeys {
     public static final String HISTORY_FILTER_ALL = "history.filter.all";
     public static final String HISTORY_FILTER_SUCCESS = "history.filter.success";
     public static final String HISTORY_FILTER_ERROR = "history.filter.error";
-    public static final String HISTORY_AGGREGATE_TOOLTIP = "history.aggregate.tooltip";
-    public static final String HISTORY_STATS = "history.stats";
     public static final String HISTORY_EMPTY_FILTERED = "history.empty_filtered";
     public static final String HISTORY_OVERVIEW_BODY = "history.overview.body";
     public static final String HISTORY_OVERVIEW_ENDPOINT_CARD = "history.overview.endpoint_card";
@@ -1129,18 +1245,15 @@ public final class MessageKeys {
     public static final String COLLECTIONS_IMPORT_APIPOST_INVALID = "collections.import.apipost.invalid";
 
     // ============ 集合对话框相关 ============
-    public static final String COLLECTIONS_DIALOG_ADD_GROUP_PROMPT = "collections.dialog.add_group.prompt";
-    public static final String COLLECTIONS_DIALOG_RENAME_GROUP_PROMPT = "collections.dialog.rename_group.prompt";
+    public static final String COLLECTIONS_DIALOG_ADD_GROUP_TITLE = "collections.dialog.add_group.title";
     public static final String COLLECTIONS_DIALOG_RENAME_GROUP_TITLE = "collections.dialog.rename_group.title";
     public static final String COLLECTIONS_DIALOG_ADD_REQUEST_TITLE = "collections.dialog.add_request.title";
     public static final String COLLECTIONS_DIALOG_ADD_REQUEST_NAME = "collections.dialog.add_request.name";
     public static final String COLLECTIONS_DIALOG_ADD_REQUEST_PROTOCOL = "collections.dialog.add_request.protocol";
     public static final String COLLECTIONS_DIALOG_ADD_REQUEST_NAME_EMPTY = "collections.dialog.add_request.name_empty";
     public static final String COLLECTIONS_DIALOG_RENAME_GROUP_EMPTY = "collections.dialog.rename_group.empty";
-    public static final String COLLECTIONS_DIALOG_RENAME_REQUEST_PROMPT = "collections.dialog.rename_request.prompt";
     public static final String COLLECTIONS_DIALOG_RENAME_REQUEST_TITLE = "collections.dialog.rename_request.title";
     public static final String COLLECTIONS_DIALOG_RENAME_REQUEST_EMPTY = "collections.dialog.rename_request.empty";
-    public static final String COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_PROMPT = "collections.dialog.rename_saved_response.prompt";
     public static final String COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_TITLE = "collections.dialog.rename_saved_response.title";
     public static final String COLLECTIONS_DIALOG_RENAME_SAVED_RESPONSE_EMPTY = "collections.dialog.rename_saved_response.empty";
     public static final String COLLECTIONS_DIALOG_MULTI_SELECT_TITLE = "collections.dialog.multi_select.title";
@@ -1245,6 +1358,8 @@ public final class MessageKeys {
     // 固定模式标签
     public static final String THREADGROUP_FIXED_USERS = "threadgroup.fixed.users";
     public static final String THREADGROUP_FIXED_EXECUTION_MODE = "threadgroup.fixed.execution_mode";
+    public static final String THREADGROUP_FIXED_EXECUTION_COUNT = "threadgroup.fixed.execution_count";
+    public static final String THREADGROUP_FIXED_EXECUTION_TIME = "threadgroup.fixed.execution_time";
     public static final String THREADGROUP_FIXED_USE_TIME = "threadgroup.fixed.use_time";
     public static final String THREADGROUP_FIXED_LOOPS = "threadgroup.fixed.loops";
     public static final String THREADGROUP_FIXED_DURATION = "threadgroup.fixed.duration";
@@ -1378,6 +1493,8 @@ public final class MessageKeys {
     public static final String SETTINGS_GENERAL_MAX_HISTORY_TOOLTIP = "settings.general.max_history.tooltip";
     public static final String SETTINGS_GENERAL_MAX_OPENED_REQUESTS = "settings.general.max_opened_requests";
     public static final String SETTINGS_GENERAL_MAX_OPENED_REQUESTS_TOOLTIP = "settings.general.max_opened_requests.tooltip";
+    public static final String SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD = "settings.git.diff.large_file_threshold";
+    public static final String SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD_TOOLTIP = "settings.git.diff.large_file_threshold.tooltip";
     public static final String SETTINGS_GENERAL_AUTO_FORMAT_RESPONSE = "settings.general.auto_format_response";
     public static final String SETTINGS_GENERAL_AUTO_FORMAT_RESPONSE_TOOLTIP = "settings.general.auto_format_response.tooltip";
     public static final String SETTINGS_GENERAL_STARTUP_SPLASH = "settings.general.startup_splash";
@@ -1417,6 +1534,7 @@ public final class MessageKeys {
     public static final String SETTINGS_VALIDATION_SLOW_REQUEST_THRESHOLD_ERROR = "settings.validation.slow_request_threshold.error";
     public static final String SETTINGS_VALIDATION_RESPONSE_BODY_PREVIEW_LIMIT_ERROR = "settings.validation.response_body_preview_limit.error";
     public static final String SETTINGS_VALIDATION_RESULT_ROW_LIMIT_ERROR = "settings.validation.result_row_limit.error";
+    public static final String SETTINGS_VALIDATION_GIT_DIFF_LARGE_FILE_THRESHOLD_ERROR = "settings.validation.git_diff_large_file_threshold.error";
     public static final String SETTINGS_VALIDATION_MAX_HISTORY_ERROR = "settings.validation.max_history.error";
     public static final String SETTINGS_VALIDATION_MAX_OPENED_REQUESTS_ERROR = "settings.validation.max_opened_requests_error";
     public static final String SETTINGS_VALIDATION_PORT_ERROR = "settings.validation.port.error";
@@ -1444,13 +1562,25 @@ public final class MessageKeys {
     public static final String RESPONSE_HEADERS_COPY_ALL = "response.headers.copy_all";
     public static final String RESPONSE_HEADERS_SELECT_ALL = "response.headers.select_all";
     public static final String RESPONSE_SAVE_DIALOG_TITLE = "response.save.dialog.title";
-    public static final String RESPONSE_SAVE_DIALOG_MESSAGE = "response.save.dialog.message";
     public static final String RESPONSE_SAVE_SUCCESS = "response.save.success";
     public static final String RESPONSE_SAVE_ERROR = "response.save.error";
     public static final String RESPONSE_LOAD_ERROR = "response.load.error";
     public static final String RESPONSE_SAVE_NO_RESPONSE = "response.save.no_response";
     public static final String RESPONSE_SAVE_REQUEST_NOT_SAVED = "response.save.request_not_saved";
     public static final String RESPONSE_SAVE_REQUEST_NOT_FOUND = "response.save.request_not_found";
+    public static final String RESPONSE_STATUS_TOOLTIP = "response.status.tooltip";
+    public static final String RESPONSE_TIME_TOOLTIP = "response.time.tooltip";
+    public static final String RESPONSE_SIZE_BODY_TOOLTIP = "response.size.body.tooltip";
+    public static final String RESPONSE_SIZE_SECTION_RESPONSE = "response.size.section.response";
+    public static final String RESPONSE_SIZE_SECTION_REQUEST = "response.size.section.request";
+    public static final String RESPONSE_SIZE_RESPONSE_HEADERS = "response.size.response.headers";
+    public static final String RESPONSE_SIZE_RESPONSE_BODY = "response.size.response.body";
+    public static final String RESPONSE_SIZE_RESPONSE_BODY_COMPRESSED = "response.size.response.body.compressed";
+    public static final String RESPONSE_SIZE_REQUEST_HEADERS = "response.size.request.headers";
+    public static final String RESPONSE_SIZE_REQUEST_BODY = "response.size.request.body";
+    public static final String RESPONSE_SIZE_UNCOMPRESSED = "response.size.uncompressed";
+    public static final String RESPONSE_SIZE_COMPRESSION_RATIO = "response.size.compression.ratio";
+    public static final String RESPONSE_SIZE_COMPRESSION_SAVED = "response.size.compression.saved";
 
     // ============ CSV Data Panel related ============
     public static final String CSV_STATUS_NO_DATA = "csv.status.no_data";
@@ -1484,7 +1614,7 @@ public final class MessageKeys {
     public static final String CSV_SELECT_ROWS_TO_DELETE = "csv.select_rows_to_delete";
     public static final String CSV_CONFIRM_DELETE_ROWS = "csv.confirm_delete_rows";
     public static final String CSV_CONFIRM_DELETE = "csv.confirm_delete";
-    public static final String CSV_ENTER_COLUMN_NAME = "csv.enter_column_name";
+    public static final String CSV_COLUMN_NAME_EMPTY = "csv.column_name.empty";
     public static final String CSV_ADD_COLUMN = "csv.add_column";
     public static final String CSV_SELECT_COLUMNS_TO_DELETE = "csv.select_columns_to_delete";
     public static final String CSV_CANNOT_DELETE_ALL_COLUMNS = "csv.cannot_delete_all_columns";
@@ -1858,12 +1988,15 @@ public final class MessageKeys {
     public static final String WATERFALL_CERTIFICATE_CN = "waterfall.certificate_cn";
     public static final String WATERFALL_ISSUER_CN = "waterfall.issuer_cn";
     public static final String WATERFALL_VALID_UNTIL = "waterfall.valid_until";
+    public static final String WATERFALL_STAGE_TOTAL_DURATION = "waterfall.stage_total_duration";
+    public static final String WATERFALL_CERT_WARNING = "waterfall.cert_warning";
     public static final String WATERFALL_STAGE_DNS = "waterfall.stage.dns";
     public static final String WATERFALL_STAGE_SOCKET = "waterfall.stage.socket";
     public static final String WATERFALL_STAGE_SSL = "waterfall.stage.ssl";
     public static final String WATERFALL_STAGE_REQUEST_SEND = "waterfall.stage.request_send";
     public static final String WATERFALL_STAGE_WAITING = "waterfall.stage.waiting";
     public static final String WATERFALL_STAGE_CONTENT_DOWNLOAD = "waterfall.stage.content_download";
+    public static final String WATERFALL_STAGE_DURATION = "waterfall.stage.duration";
     public static final String WATERFALL_STAGE_DESC_DNS = "waterfall.stage.desc.dns";
     public static final String WATERFALL_STAGE_DESC_SOCKET = "waterfall.stage.desc.socket";
     public static final String WATERFALL_STAGE_DESC_SSL = "waterfall.stage.desc.ssl";
@@ -2135,6 +2268,53 @@ public final class MessageKeys {
     public static final String SETTINGS_PROXY_STATUS_UNAVAILABLE = "settings.proxy.status.unavailable";
     public static final String NETWORK_ERROR_PROXY_SOCKS_MALFORMED = "network.error.proxy.socks.malformed";
 
+    // WebDAV 同步设置
+    public static final String SETTINGS_WEBDAV_SYNC_TITLE = "settings.webdav_sync.title";
+    public static final String SETTINGS_WEBDAV_SYNC_DESCRIPTION = "settings.webdav_sync.description";
+    public static final String SETTINGS_WEBDAV_SYNC_ENABLED_CHECKBOX = "settings.webdav_sync.enabled.checkbox";
+    public static final String SETTINGS_WEBDAV_SYNC_ENABLED_TOOLTIP = "settings.webdav_sync.enabled.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_SERVER_URL = "settings.webdav_sync.server_url";
+    public static final String SETTINGS_WEBDAV_SYNC_SERVER_URL_TOOLTIP = "settings.webdav_sync.server_url.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_REMOTE_DIRECTORY = "settings.webdav_sync.remote_directory";
+    public static final String SETTINGS_WEBDAV_SYNC_REMOTE_DIRECTORY_TOOLTIP = "settings.webdav_sync.remote_directory.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_USERNAME = "settings.webdav_sync.username";
+    public static final String SETTINGS_WEBDAV_SYNC_USERNAME_TOOLTIP = "settings.webdav_sync.username.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_PASSWORD = "settings.webdav_sync.password";
+    public static final String SETTINGS_WEBDAV_SYNC_PASSWORD_TOOLTIP = "settings.webdav_sync.password.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_LAST_SYNC_TIME = "settings.webdav_sync.last_sync_time";
+    public static final String SETTINGS_WEBDAV_SYNC_LAST_SYNC_TIME_TOOLTIP = "settings.webdav_sync.last_sync_time.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_NEVER_SYNCED = "settings.webdav_sync.never_synced";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_TEST = "settings.webdav_sync.action.test";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_TEST_TOOLTIP = "settings.webdav_sync.action.test.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_UPLOAD = "settings.webdav_sync.action.upload";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_UPLOAD_TOOLTIP = "settings.webdav_sync.action.upload.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_RESTORE = "settings.webdav_sync.action.restore";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_RESTORE_TOOLTIP = "settings.webdav_sync.action.restore.tooltip";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_DISABLED = "settings.webdav_sync.status.disabled";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_NOT_CONFIGURED = "settings.webdav_sync.status.not_configured";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_READY = "settings.webdav_sync.status.ready";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_TESTING = "settings.webdav_sync.status.testing";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_CHECKING_REMOTE = "settings.webdav_sync.status.checking_remote";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_UPLOADING = "settings.webdav_sync.status.uploading";
+    public static final String SETTINGS_WEBDAV_SYNC_STATUS_RESTORING = "settings.webdav_sync.status.restoring";
+    public static final String SETTINGS_WEBDAV_SYNC_TEST_SUCCESS = "settings.webdav_sync.test.success";
+    public static final String SETTINGS_WEBDAV_SYNC_UPLOAD_SUCCESS = "settings.webdav_sync.upload.success";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_SUCCESS = "settings.webdav_sync.restore.success";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_SUCCESS_SHORT = "settings.webdav_sync.restore.success.short";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_RESTART_TITLE = "settings.webdav_sync.restore.restart.title";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_RESTART_MESSAGE = "settings.webdav_sync.restore.restart.message";
+    public static final String SETTINGS_WEBDAV_SYNC_ACTION_FAILED = "settings.webdav_sync.action.failed";
+    public static final String SETTINGS_WEBDAV_SYNC_VALIDATION_REQUIRED = "settings.webdav_sync.validation.required";
+    public static final String SETTINGS_WEBDAV_SYNC_VALIDATION_URL = "settings.webdav_sync.validation.url";
+    public static final String SETTINGS_WEBDAV_SYNC_VALIDATION_HTTP_WARNING = "settings.webdav_sync.validation.http_warning";
+    public static final String SETTINGS_WEBDAV_SYNC_REMOTE_SNAPSHOT_DETAIL = "settings.webdav_sync.remote_snapshot.detail";
+    public static final String SETTINGS_WEBDAV_SYNC_REMOTE_SNAPSHOT_NONE = "settings.webdav_sync.remote_snapshot.none";
+    public static final String SETTINGS_WEBDAV_SYNC_REMOTE_SNAPSHOT_UNKNOWN = "settings.webdav_sync.remote_snapshot.unknown";
+    public static final String SETTINGS_WEBDAV_SYNC_UPLOAD_CONFIRM_TITLE = "settings.webdav_sync.upload.confirm.title";
+    public static final String SETTINGS_WEBDAV_SYNC_UPLOAD_CONFIRM_MESSAGE = "settings.webdav_sync.upload.confirm.message";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_CONFIRM_TITLE = "settings.webdav_sync.restore.confirm.title";
+    public static final String SETTINGS_WEBDAV_SYNC_RESTORE_CONFIRM_MESSAGE = "settings.webdav_sync.restore.confirm.message";
+
     // ============ 工具箱相关 ============
     public static final String TOOLBOX_ENCODER = "toolbox.encoder";
     public static final String TOOLBOX_ENCODER_TITLE = "toolbox.encoder.title";
@@ -2386,7 +2566,6 @@ public final class MessageKeys {
     public static final String TOOLBOX_ES_PROFILE_NEW_DEFAULT = "toolbox.es.profile.new.default";
     public static final String TOOLBOX_ES_PROFILE_SAVE = "toolbox.es.profile.save";
     public static final String TOOLBOX_ES_PROFILE_SAVE_AS = "toolbox.es.profile.save_as";
-    public static final String TOOLBOX_ES_PROFILE_SAVE_AS_PROMPT = "toolbox.es.profile.save_as.prompt";
     public static final String TOOLBOX_ES_PROFILE_SAVE_AS_TITLE = "toolbox.es.profile.save_as.title";
     public static final String TOOLBOX_ES_PROFILE_DELETE = "toolbox.es.profile.delete";
     public static final String TOOLBOX_ES_PROFILE_SAVED = "toolbox.es.profile.saved";
@@ -2407,6 +2586,7 @@ public final class MessageKeys {
     public static final String TOOLBOX_ES_INDEX_LIST_EMPTY = "toolbox.es.index.list_empty";
     // 索引管理
     public static final String TOOLBOX_ES_INDEX_MANAGEMENT = "toolbox.es.index.management";
+    public static final String TOOLBOX_ES_INDEX_TAB = "toolbox.es.index.tab";
     public static final String TOOLBOX_ES_INDEX_DELETE = "toolbox.es.index.delete";
     public static final String TOOLBOX_ES_INDEX_CREATE = "toolbox.es.index.create";
     public static final String TOOLBOX_ES_INDEX_NAME = "toolbox.es.index.name";
@@ -2438,6 +2618,7 @@ public final class MessageKeys {
     public static final String TOOLBOX_ES_COPY_RESULT = "toolbox.es.copy_result";
     public static final String TOOLBOX_ES_CLEAR = "toolbox.es.clear";
     public static final String TOOLBOX_ES_EXECUTE = "toolbox.es.execute";
+    public static final String TOOLBOX_ES_EXECUTE_SHORT = "toolbox.es.execute.short";
     public static final String TOOLBOX_ES_PATH_PLACEHOLDER = "toolbox.es.path.placeholder";
     public static final String TOOLBOX_ES_DSL_TITLE = "toolbox.es.dsl.title";
     public static final String TOOLBOX_ES_RESPONSE_TITLE = "toolbox.es.response.title";
@@ -2464,7 +2645,6 @@ public final class MessageKeys {
     public static final String TOOLBOX_INFLUX_PROFILE_NEW_DEFAULT = "toolbox.influx.profile.new.default";
     public static final String TOOLBOX_INFLUX_PROFILE_SAVE = "toolbox.influx.profile.save";
     public static final String TOOLBOX_INFLUX_PROFILE_SAVE_AS = "toolbox.influx.profile.save_as";
-    public static final String TOOLBOX_INFLUX_PROFILE_SAVE_AS_PROMPT = "toolbox.influx.profile.save_as.prompt";
     public static final String TOOLBOX_INFLUX_PROFILE_SAVE_AS_TITLE = "toolbox.influx.profile.save_as.title";
     public static final String TOOLBOX_INFLUX_PROFILE_DELETE = "toolbox.influx.profile.delete";
     public static final String TOOLBOX_INFLUX_PROFILE_SAVED = "toolbox.influx.profile.saved";
@@ -2500,11 +2680,27 @@ public final class MessageKeys {
     public static final String TOOLBOX_INFLUX_STATUS_OK = "toolbox.influx.status.ok";
     public static final String TOOLBOX_INFLUX_STATUS_ERROR = "toolbox.influx.status.error";
     public static final String TOOLBOX_INFLUX_EXECUTE = "toolbox.influx.execute";
+    public static final String TOOLBOX_INFLUX_EXECUTE_SHORT = "toolbox.influx.execute.short";
     public static final String TOOLBOX_INFLUX_EXECUTE_V1 = "toolbox.influx.execute.v1";
     public static final String TOOLBOX_INFLUX_EXECUTE_V2 = "toolbox.influx.execute.v2";
     public static final String TOOLBOX_INFLUX_RELOAD_META = "toolbox.influx.reload_meta";
     public static final String TOOLBOX_INFLUX_LOAD_TEMPLATE = "toolbox.influx.load_template";
     public static final String TOOLBOX_INFLUX_FIELD = "toolbox.influx.field";
+    public static final String TOOLBOX_INFLUX_TAGS = "toolbox.influx.tags";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_LATEST_100 = "toolbox.influx.template.flux.latest_100";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_COUNT_BY_MEASUREMENT = "toolbox.influx.template.flux.count_by_measurement";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_MEAN_BY_1M = "toolbox.influx.template.mean_by_1m";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_TOP_10_VALUES = "toolbox.influx.template.flux.top_10_values";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_GROUP_BY_TAG = "toolbox.influx.template.flux.group_by_tag";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_FIELD_SELECTOR = "toolbox.influx.template.flux.field_selector";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_FLUX_PIVOT_VIEW = "toolbox.influx.template.flux.pivot_view";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_LATEST_100 = "toolbox.influx.template.influxql.latest_100";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_COUNT_LAST_1H = "toolbox.influx.template.influxql.count_last_1h";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_TAG_VALUES = "toolbox.influx.template.influxql.tag_values";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_FIELD_KEYS = "toolbox.influx.template.influxql.field_keys";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_SERIES_CARDINALITY = "toolbox.influx.template.influxql.series_cardinality";
+    public static final String TOOLBOX_INFLUX_TEMPLATE_INFLUXQL_LAST_POINT_PER_HOST = "toolbox.influx.template.influxql.last_point_per_host";
+    public static final String TOOLBOX_INFLUX_MEASUREMENT_TAB = "toolbox.influx.measurement.tab";
     public static final String TOOLBOX_INFLUX_MEASUREMENT_MANAGEMENT = "toolbox.influx.measurement.management";
     public static final String TOOLBOX_INFLUX_HISTORY = "toolbox.influx.history";
     public static final String TOOLBOX_INFLUX_HISTORY_CLEAR = "toolbox.influx.history.clear";

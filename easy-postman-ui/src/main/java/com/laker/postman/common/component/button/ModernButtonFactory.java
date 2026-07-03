@@ -1,38 +1,33 @@
 package com.laker.postman.common.component.button;
 
-import com.laker.postman.common.constants.ModernColors;
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.IconUtil;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 /**
  * Shared modern button styling used across dialogs and settings panels.
  */
 public final class ModernButtonFactory {
 
-    private static final int ARC = 8;
+    static final String PRIMARY_STYLE_CLASS = "easyPostmanPrimary";
+    static final String SECONDARY_STYLE_CLASS = "easyPostmanSecondary";
+    static final String TOGGLE_STYLE_CLASS = "easyPostmanToggle";
+    public static final int COMPACT_BUTTON_HEIGHT = 30;
+    static final int COMPACT_BUTTON_MIN_WIDTH = 72;
     private static final Dimension DEFAULT_SIZE = new Dimension(100, 34);
-    private static final Border EMPTY_TEXT_PADDING = new EmptyBorder(7, 16, 7, 16);
     private static final int DEFAULT_ICON_SIZE = 16;
+    static final int COMPACT_ICON_SIZE = 14;
+    private static final int COMPACT_HORIZONTAL_PADDING = 24;
 
     private ModernButtonFactory() {
     }
 
     public static JButton createButton(String text, boolean primary) {
-        JButton button = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                paintModernButtonBackground(this, g, primary);
-                super.paintComponent(g);
-            }
-        };
-        configureBaseButton(button, primary);
+        JButton button = new JButton(text);
+        configureBaseButton(button, primary ? PRIMARY_STYLE_CLASS : SECONDARY_STYLE_CLASS);
         return button;
     }
 
@@ -46,45 +41,46 @@ public final class ModernButtonFactory {
         return button;
     }
 
-    public static JToggleButton createToggleButton(String text) {
-        JToggleButton button = new JToggleButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                paintModernToggleButtonBackground(this, g);
-                super.paintComponent(g);
-            }
-        };
-        configureBaseButton(button, false);
+    public static JButton createCompactButton(String text, boolean primary, String iconPath) {
+        JButton button = createButton(text, primary);
+        configureButtonIcon(button, primary, iconPath, COMPACT_ICON_SIZE);
+        configureCompactButton(button);
         return button;
     }
 
-    private static void configureBaseButton(AbstractButton button, boolean primary) {
+    static void configureCompactButton(AbstractButton button) {
         button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
-        button.setForeground(resolveButtonForeground(primary));
-        button.setPreferredSize(DEFAULT_SIZE);
-        button.setBorder(EMPTY_TEXT_PADDING);
-        button.setContentAreaFilled(false);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setOpaque(false);
-        button.setRolloverEnabled(true);
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (button.isEnabled()) {
-                    button.repaint();
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.repaint();
-            }
-        });
+        Dimension size = new Dimension(
+                compactButtonWidth(textWidth(button), iconWidth(button), button.getIconTextGap()),
+                COMPACT_BUTTON_HEIGHT
+        );
+        button.putClientProperty(FlatClientProperties.STYLE,
+                "minimumWidth: 0; minimumHeight: " + COMPACT_BUTTON_HEIGHT
+                        + "; margin: 2,8,2,8; arc: 6");
+        button.setPreferredSize(size);
+        button.setMinimumSize(size);
+        button.setMaximumSize(size);
     }
 
-    private static void configureButtonIcon(AbstractButton button, boolean primary, String iconPath, int iconSize) {
+    static int compactButtonWidth(int textWidth, int iconWidth, int iconTextGap) {
+        return Math.max(COMPACT_BUTTON_MIN_WIDTH, textWidth + iconWidth + iconTextGap + COMPACT_HORIZONTAL_PADDING);
+    }
+
+    public static JToggleButton createToggleButton(String text) {
+        JToggleButton button = new JToggleButton(text);
+        configureBaseButton(button, TOGGLE_STYLE_CLASS);
+        return button;
+    }
+
+    static void configureBaseButton(AbstractButton button, String styleClass) {
+        button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        button.setPreferredSize(DEFAULT_SIZE);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setRolloverEnabled(true);
+        button.putClientProperty(FlatClientProperties.STYLE_CLASS, styleClass);
+    }
+
+    static void configureButtonIcon(AbstractButton button, boolean primary, String iconPath, int iconSize) {
         if (iconPath == null || iconPath.isBlank()) {
             return;
         }
@@ -94,96 +90,13 @@ public final class ModernButtonFactory {
         button.setIconTextGap(6);
     }
 
-    private static void paintModernButtonBackground(AbstractButton button, Graphics g, boolean primary) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        g2.setColor(resolveBackground(button, primary));
-        g2.fillRoundRect(0, 0, button.getWidth(), button.getHeight(), ARC, ARC);
-
-        if (!primary) {
-            g2.setColor(button.isEnabled() ? ModernColors.getBorderMediumColor() : ModernColors.getBorderLightColor());
-            g2.drawRoundRect(0, 0, button.getWidth() - 1, button.getHeight() - 1, ARC, ARC);
-        }
-
-        button.setForeground(resolveButtonForeground(primary));
-        g2.dispose();
+    private static int textWidth(AbstractButton button) {
+        String text = button.getText();
+        return text == null || text.isBlank() ? 0 : button.getFontMetrics(button.getFont()).stringWidth(text);
     }
 
-    private static void paintModernToggleButtonBackground(AbstractButton button, Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        Color background = resolveToggleBackground(button);
-        if (background != null) {
-            g2.setColor(background);
-            g2.fillRoundRect(0, 0, button.getWidth(), button.getHeight(), ARC, ARC);
-        }
-
-        button.setForeground(resolveToggleForeground(button));
-        g2.dispose();
-    }
-
-    private static Color resolveBackground(AbstractButton button, boolean primary) {
-        ButtonModel model = button.getModel();
-
-        if (primary) {
-            if (!button.isEnabled()) {
-                return ModernColors.getTextDisabled();
-            }
-            if (model.isPressed()) {
-                return ModernColors.getPrimaryDarker();
-            }
-            if (model.isRollover()) {
-                return ModernColors.getPrimaryLight();
-            }
-            return ModernColors.getPrimary();
-        }
-
-        if (!button.isEnabled()) {
-            return ModernColors.getBackgroundColor();
-        }
-        if (model.isPressed()) {
-            return ModernColors.getButtonPressedColor();
-        }
-        if (model.isRollover()) {
-            return ModernColors.getHoverBackgroundColor();
-        }
-        return ModernColors.getCardBackgroundColor();
-    }
-
-    private static Color resolveToggleBackground(AbstractButton button) {
-        ButtonModel model = button.getModel();
-
-        if (!button.isEnabled()) {
-            return null;
-        }
-        if (button.isSelected()) {
-            if (model.isPressed()) {
-                return ModernColors.getPrimaryDarker();
-            }
-            if (model.isRollover()) {
-                return ModernColors.getPrimaryLight();
-            }
-            return ModernColors.getPrimary();
-        }
-        if (model.isPressed()) {
-            return ModernColors.getButtonPressedColor();
-        }
-        if (model.isRollover()) {
-            return ModernColors.getHoverBackgroundColor();
-        }
-        return null;
-    }
-
-    private static Color resolveToggleForeground(AbstractButton button) {
-        if (!button.isEnabled()) {
-            return ModernColors.getTextDisabled();
-        }
-        return button.isSelected() ? ModernColors.getTextInverse() : ModernColors.getTextPrimary();
-    }
-
-    private static Color resolveButtonForeground(boolean primary) {
-        return primary ? ModernColors.getTextInverse() : ModernColors.getTextPrimary();
+    private static int iconWidth(AbstractButton button) {
+        Icon icon = button.getIcon();
+        return icon == null ? 0 : icon.getIconWidth();
     }
 }

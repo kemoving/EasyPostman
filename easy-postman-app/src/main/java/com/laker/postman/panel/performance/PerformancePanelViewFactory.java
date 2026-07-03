@@ -1,8 +1,5 @@
 package com.laker.postman.panel.performance;
 
-import com.laker.postman.request.model.RequestItemProtocolEnum;
-
-
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.laker.postman.common.component.MemoryLabel;
@@ -15,8 +12,7 @@ import com.laker.postman.common.component.button.HelpButton;
 import com.laker.postman.common.component.button.ImportButton;
 import com.laker.postman.common.component.button.PlusButton;
 import com.laker.postman.common.component.button.RefreshButton;
-import com.laker.postman.common.component.button.SegmentedButtonGroupPanel;
-import com.laker.postman.common.component.button.SegmentedToggleButton;
+import com.laker.postman.common.component.button.SegmentedButtonBar;
 import com.laker.postman.common.component.button.StartButton;
 import com.laker.postman.common.component.button.StopButton;
 import com.laker.postman.common.constants.ModernColors;
@@ -30,13 +26,14 @@ import com.laker.postman.panel.performance.controller.ControllerDescriptionPanel
 import com.laker.postman.panel.performance.controller.LoopPropertyPanel;
 import com.laker.postman.panel.performance.controller.WhilePropertyPanel;
 import com.laker.postman.panel.performance.extractor.ExtractorPropertyPanel;
+import com.laker.postman.panel.performance.result.LazyPerformanceTrendPanel;
 import com.laker.postman.panel.performance.result.PerformanceReportPanel;
 import com.laker.postman.panel.performance.result.PerformanceResultTablePanel;
-import com.laker.postman.panel.performance.result.LazyPerformanceTrendPanel;
 import com.laker.postman.panel.performance.result.PerformanceTrendView;
 import com.laker.postman.panel.performance.threadgroup.ThreadGroupPropertyPanel;
 import com.laker.postman.panel.performance.timer.TimerPropertyPanel;
 import com.laker.postman.performance.core.worker.PerformanceWorkerEndpointParser;
+import com.laker.postman.request.model.RequestItemProtocolEnum;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.IconUtil;
 import com.laker.postman.util.I18nUtil;
@@ -57,10 +54,10 @@ final class PerformancePanelViewFactory {
     static final int RESULT_TAB_REPORT = 1;
     static final int RESULT_TAB_TABLE = 2;
     private static final int TOOLBAR_CONTROL_HEIGHT = 28;
-    private static final String RESULT_CONTEXT_TABLE = "table";
-    private static final String RESULT_CONTEXT_REPORT = "report";
-    private static final String RESULT_CONTEXT_TREND = "trend";
-
+    private static final int WORKER_ENDPOINT_FIELD_MIN_WIDTH = 280;
+    private static final int WORKER_ENDPOINT_FIELD_PREFERRED_WIDTH = 420;
+    private static final int WORKER_ENDPOINT_FIELD_MAX_WIDTH = 520;
+    private static final Insets TOOLBAR_INSETS = new Insets(6, 10, 6, 10);
     TreeSection createTreeSection(DefaultTreeModel treeModel) {
         JTree performanceTree = new JTree(treeModel);
         performanceTree.setRootVisible(true);
@@ -74,7 +71,7 @@ final class PerformancePanelViewFactory {
         JScrollPane treeScroll = new JScrollPane(performanceTree);
         treeScroll.setPreferredSize(new Dimension(260, 300));
         ToolWindowSurfaceStyle.applyTreeScrollPaneCard(treeScroll, performanceTree);
-        return new TreeSection(performanceTree, treeScroll);
+        return new TreeSection(performanceTree, treeScroll, treeScroll);
     }
 
     PropertySection createPropertySection(String emptyCard,
@@ -238,11 +235,11 @@ final class PerformancePanelViewFactory {
                                         Consumer<String> workerEndpointsAction) {
         JPanel topPanel = new JPanel(new MigLayout(
                 "insets 6 10 6 10, fillx, novisualpadding, gap 0",
-                "[]8[1!]10[]10[1!]10[280:380:520,fill]push[]",
-                "[]"
+                "[pref!,left,shrink 100]push[pref!]",
+                "[]4[]"
         ));
         ToolWindowSurfaceStyle.applyCard(topPanel);
-        topPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        applyToolbarInsets(topPanel);
 
         StartButton runBtn = new StartButton();
         StopButton stopBtn = new StopButton();
@@ -262,9 +259,10 @@ final class PerformancePanelViewFactory {
         usageHelpBtn.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_USAGE_HELP_TOOLTIP));
         usageHelpBtn.addActionListener(e -> usageHelpAction.run());
 
+        JPanel primaryPanel = createToolbarGroupPanel("[]8[1!]10[]10[1!]10[]");
         JPanel btnPanel = ToolWindowActionToolbar.inlineLeft(runBtn, stopBtn, importBtn, exportBtn, refreshBtn, usageHelpBtn);
-        topPanel.add(btnPanel);
-        topPanel.add(createToolbarSeparator());
+        primaryPanel.add(btnPanel);
+        primaryPanel.add(createToolbarSeparator());
 
         JPanel planPanel = createToolbarGroupPanel("[]4[140:160:180,fill]4[]2[]2[]2[]");
         JLabel planLabel = new JLabel(I18nUtil.getMessage(MessageKeys.PERFORMANCE_PLAN_LABEL));
@@ -288,37 +286,53 @@ final class PerformancePanelViewFactory {
         planPanel.add(duplicatePlanButton);
         planPanel.add(renamePlanButton);
         planPanel.add(deletePlanButton);
-        topPanel.add(planPanel);
-        topPanel.add(createToolbarSeparator());
+        primaryPanel.add(planPanel);
+        primaryPanel.add(createToolbarSeparator());
 
-        JPanel remotePanel = createToolbarGroupPanel("[]6[160:260:360,fill]6[]");
         JCheckBox remoteModeCheckBox = new JCheckBox(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_MODE));
         remoteModeCheckBox.setSelected(remoteExecutionEnabled);
         remoteModeCheckBox.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_MODE_TOOLTIP));
+        JPanel remoteTogglePanel = ToolWindowActionToolbar.inlineLeft(remoteModeCheckBox);
+        primaryPanel.add(remoteTogglePanel);
+
+        JPanel workerEndpointRow = createToolbarGroupPanel(
+                "[right,pref!]8[" + WORKER_ENDPOINT_FIELD_MIN_WIDTH
+                        + ":" + WORKER_ENDPOINT_FIELD_PREFERRED_WIDTH
+                        + ":" + WORKER_ENDPOINT_FIELD_MAX_WIDTH + ",fill]",
+                ", hidemode 3"
+        );
+        JLabel workerEndpointsLabel = new JLabel(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_LABEL));
+        workerEndpointsLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        workerEndpointsLabel.setForeground(ModernColors.getTextSecondary());
         JTextField workerEndpointsField = new JTextField(workerEndpoints == null ? "" : workerEndpoints);
-        workerEndpointsField.setPreferredSize(new Dimension(260, TOOLBAR_CONTROL_HEIGHT));
+        workerEndpointsField.setPreferredSize(new Dimension(WORKER_ENDPOINT_FIELD_PREFERRED_WIDTH, TOOLBAR_CONTROL_HEIGHT));
         workerEndpointsField.putClientProperty(
                 FlatClientProperties.PLACEHOLDER_TEXT,
                 I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_PLACEHOLDER)
         );
         workerEndpointsField.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_TOOLTIP));
-        JLabel workerStatusLabel = createWorkerStatusLabel();
         remoteModeCheckBox.addActionListener(e -> {
             if (remoteExecutionEnabledAction != null) {
                 remoteExecutionEnabledAction.accept(remoteModeCheckBox.isSelected());
             }
-            syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerStatusLabel);
+            syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerEndpointRow);
+            if (remoteModeCheckBox.isSelected()) {
+                SwingUtilities.invokeLater(workerEndpointsField::requestFocusInWindow);
+            }
         });
         addWorkerEndpointsListener(
                 workerEndpointsField,
                 workerEndpointsAction,
-                () -> syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerStatusLabel)
+                () -> syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerEndpointRow)
         );
-        syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerStatusLabel);
-        remotePanel.add(remoteModeCheckBox);
-        remotePanel.add(workerEndpointsField);
-        remotePanel.add(workerStatusLabel);
-        topPanel.add(remotePanel);
+        workerEndpointRow.add(workerEndpointsLabel);
+        // Remote worker 地址是辅助配置，限制宽度避免焦点框横向铺满工具栏。
+        workerEndpointRow.add(workerEndpointsField, "w "
+                + WORKER_ENDPOINT_FIELD_MIN_WIDTH
+                + ":" + WORKER_ENDPOINT_FIELD_PREFERRED_WIDTH
+                + ":" + WORKER_ENDPOINT_FIELD_MAX_WIDTH
+                + ", h " + TOOLBAR_CONTROL_HEIGHT + "!");
+        syncWorkerEndpointsState(remoteModeCheckBox, workerEndpointsField, workerEndpointRow);
 
         JPanel progressPanel = createToolbarGroupPanel("[]5[]5[]", ", hidemode 3");
         JLabel progressLabel = createRunStatusLabel("0/0", "icons/users.svg");
@@ -331,7 +345,9 @@ final class PerformancePanelViewFactory {
         progressPanel.add(progressLabel);
         progressPanel.add(limitLabel);
         progressPanel.add(memoryLabel);
-        topPanel.add(progressPanel);
+        topPanel.add(primaryPanel, "wmin 0");
+        topPanel.add(progressPanel, "alignx right, shrink 0, wrap");
+        topPanel.add(workerEndpointRow, "span 2, left, hidemode 3");
 
         return new ToolbarSection(
                 topPanel,
@@ -351,6 +367,15 @@ final class PerformancePanelViewFactory {
                 progressLabel,
                 limitLabel
         );
+    }
+
+    static void applyToolbarInsets(JComponent component) {
+        component.setBorder(BorderFactory.createEmptyBorder(
+                TOOLBAR_INSETS.top,
+                TOOLBAR_INSETS.left,
+                TOOLBAR_INSETS.bottom,
+                TOOLBAR_INSETS.right
+        ));
     }
 
     private JLabel createRunStatusLabel(String text, String iconPath) {
@@ -391,17 +416,16 @@ final class PerformancePanelViewFactory {
         return separator;
     }
 
-    private JLabel createWorkerStatusLabel() {
-        JLabel label = new JLabel();
-        label.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -2));
-        label.setHorizontalAlignment(SwingConstants.LEFT);
-        return label;
-    }
-
     private void syncWorkerEndpointsState(JCheckBox remoteModeCheckBox,
                                           JTextField workerEndpointsField,
-                                          JLabel workerStatusLabel) {
+                                          JComponent workerEndpointRow) {
         boolean remoteEnabled = remoteModeCheckBox.isSelected();
+        boolean visibilityChanged = workerEndpointsField.isVisible() != remoteEnabled;
+        boolean rowVisibilityChanged = workerEndpointRow != null && workerEndpointRow.isVisible() != remoteEnabled;
+        if (workerEndpointRow != null) {
+            workerEndpointRow.setVisible(remoteEnabled);
+        }
+        workerEndpointsField.setVisible(remoteEnabled);
         workerEndpointsField.setEditable(remoteEnabled);
         workerEndpointsField.setForeground(remoteEnabled
                 ? ModernColors.getTextPrimary()
@@ -411,35 +435,38 @@ final class PerformancePanelViewFactory {
                 : ModernColors.getCardBackgroundColor());
         workerEndpointsField.putClientProperty(FlatClientProperties.OUTLINE, null);
         if (!remoteEnabled) {
-            workerStatusLabel.setText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_STATUS_LOCAL));
-            workerStatusLabel.setForeground(ModernColors.getTextHint());
-            workerStatusLabel.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_MODE_TOOLTIP));
             workerEndpointsField.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_TOOLTIP));
+            revalidateToolbarIfNeeded(workerEndpointsField, visibilityChanged || rowVisibilityChanged);
             return;
         }
 
         String text = workerEndpointsField.getText();
         if (text == null || text.isBlank()) {
-            workerStatusLabel.setText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_STATUS_REQUIRED));
-            workerStatusLabel.setForeground(ModernColors.getWarning());
-            workerStatusLabel.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_REQUIRED));
             workerEndpointsField.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_REQUIRED));
             workerEndpointsField.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_WARNING);
+            revalidateToolbarIfNeeded(workerEndpointsField, visibilityChanged || rowVisibilityChanged);
             return;
         }
 
         try {
-            int workerCount = PerformanceWorkerEndpointParser.parse(text).size();
-            workerStatusLabel.setText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_STATUS_COUNT, workerCount));
-            workerStatusLabel.setForeground(ModernColors.getSuccess());
-            workerStatusLabel.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_TOOLTIP));
+            PerformanceWorkerEndpointParser.parse(text);
             workerEndpointsField.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_TOOLTIP));
         } catch (IllegalArgumentException ex) {
-            workerStatusLabel.setText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REMOTE_WORKERS_STATUS_INVALID));
-            workerStatusLabel.setForeground(ModernColors.getError());
-            workerStatusLabel.setToolTipText(ex.getMessage());
             workerEndpointsField.setToolTipText(ex.getMessage());
             workerEndpointsField.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
+        }
+        revalidateToolbarIfNeeded(workerEndpointsField, visibilityChanged || rowVisibilityChanged);
+    }
+
+    private void revalidateToolbarIfNeeded(Component component, boolean required) {
+        if (!required) {
+            return;
+        }
+        Container parent = component.getParent();
+        while (parent != null) {
+            parent.revalidate();
+            parent.repaint();
+            parent = parent.getParent();
         }
     }
 
@@ -500,31 +527,25 @@ final class PerformancePanelViewFactory {
         ToolWindowSurfaceStyle.applyCard(toolbar);
         toolbar.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
 
-        JToggleButton resultTableButton = new SegmentedToggleButton(
-                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TAB_RESULT_TREE),
-                true
-        );
-        resultTableButton.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_RESULT_TABLE_TOOLTIP));
-        JToggleButton reportButton = new SegmentedToggleButton(
-                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TAB_REPORT),
-                false
-        );
-        reportButton.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_RESULT_REPORT_TOOLTIP));
-        JToggleButton trendButton = new SegmentedToggleButton(
+        SegmentedButtonBar<Integer> switcher = new SegmentedButtonBar<>(FlowLayout.LEFT);
+        JToggleButton trendButton = switcher.addOption(
+                RESULT_TAB_TREND,
                 I18nUtil.getMessage(MessageKeys.PERFORMANCE_TAB_TREND),
                 false
         );
         trendButton.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_ENABLED_TOOLTIP));
-
-        ButtonGroup viewGroup = new ButtonGroup();
-        viewGroup.add(resultTableButton);
-        viewGroup.add(reportButton);
-        viewGroup.add(trendButton);
-
-        JPanel switcher = new SegmentedButtonGroupPanel(FlowLayout.LEFT);
-        switcher.add(trendButton);
-        switcher.add(reportButton);
-        switcher.add(resultTableButton);
+        JToggleButton reportButton = switcher.addOption(
+                RESULT_TAB_REPORT,
+                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TAB_REPORT),
+                false
+        );
+        reportButton.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_RESULT_REPORT_TOOLTIP));
+        JToggleButton resultTableButton = switcher.addOption(
+                RESULT_TAB_TABLE,
+                I18nUtil.getMessage(MessageKeys.PERFORMANCE_TAB_RESULT_TREE),
+                true
+        );
+        resultTableButton.setToolTipText(I18nUtil.getMessage(MessageKeys.PERFORMANCE_RESULT_TABLE_TOOLTIP));
 
         JCheckBox efficientCheckBox = createCompactDetailsCheckBox(
                 parentComponent,
@@ -557,24 +578,39 @@ final class PerformancePanelViewFactory {
             saveConfigAction.run();
         });
 
-        JPanel contextCards = new JPanel(new CardLayout());
-        contextCards.setOpaque(false);
-        contextCards.add(createTableContextPanel(efficientCheckBox), RESULT_CONTEXT_TABLE);
-        contextCards.add(createReportContextPanel(reportRefreshModeBox), RESULT_CONTEXT_REPORT);
-        contextCards.add(createTrendContextPanel(trendCheckBox), RESULT_CONTEXT_TREND);
-        toolbar.add(createResultToolbarLeftPanel(switcher, contextCards), BorderLayout.WEST);
+        JPanel tableContextPanel = createTableContextPanel(efficientCheckBox);
+        JPanel reportContextPanel = createReportContextPanel(reportRefreshModeBox);
+        JPanel trendContextPanel = createTrendContextPanel(trendCheckBox);
+        JPanel contextPanel = createResultContextPanel(tableContextPanel, reportContextPanel, trendContextPanel);
+        toolbar.add(createResultToolbarLeftPanel(switcher, contextPanel), BorderLayout.WEST);
 
         resultTableButton.addActionListener(e -> selectResultTab(resultTabbedPane, RESULT_TAB_TABLE, reportRefreshAction));
         reportButton.addActionListener(e -> selectResultTab(resultTabbedPane, RESULT_TAB_REPORT, reportRefreshAction));
         trendButton.addActionListener(e -> selectResultTab(resultTabbedPane, RESULT_TAB_TREND, reportRefreshAction));
 
         resultTabbedPane.addChangeListener(e -> {
-            syncResultToolbarState(resultTabbedPane, resultTableButton, reportButton, trendButton, contextCards);
+            syncResultToolbarState(
+                    resultTabbedPane,
+                    resultTableButton,
+                    reportButton,
+                    trendButton,
+                    tableContextPanel,
+                    reportContextPanel,
+                    trendContextPanel
+            );
             if (resultTabbedPane.getSelectedIndex() == RESULT_TAB_REPORT && reportRefreshAction != null) {
                 reportRefreshAction.run();
             }
         });
-        syncResultToolbarState(resultTabbedPane, resultTableButton, reportButton, trendButton, contextCards);
+        syncResultToolbarState(
+                resultTabbedPane,
+                resultTableButton,
+                reportButton,
+                trendButton,
+                tableContextPanel,
+                reportContextPanel,
+                trendContextPanel
+        );
 
         return new ResultToolbar(
                 toolbar,
@@ -617,18 +653,33 @@ final class PerformancePanelViewFactory {
     }
 
     private JPanel createTableContextPanel(JCheckBox efficientCheckBox) {
-        return ToolWindowActionToolbar.inlineRight(efficientCheckBox);
+        return ToolWindowActionToolbar.inlineLeft(efficientCheckBox);
     }
 
     private JPanel createReportContextPanel(JComboBox<String> reportRefreshModeBox) {
         JLabel label = new JLabel(I18nUtil.getMessage(MessageKeys.PERFORMANCE_REPORT_REFRESH_MODE));
         label.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
         label.setForeground(ModernColors.getTextSecondary());
-        return ToolWindowActionToolbar.inlineRight(label, reportRefreshModeBox);
+        return ToolWindowActionToolbar.inlineLeft(label, reportRefreshModeBox);
     }
 
     private JPanel createTrendContextPanel(JCheckBox trendCheckBox) {
-        return ToolWindowActionToolbar.inlineRight(trendCheckBox);
+        return ToolWindowActionToolbar.inlineLeft(trendCheckBox);
+    }
+
+    private JPanel createResultContextPanel(JPanel tableContextPanel,
+                                            JPanel reportContextPanel,
+                                            JPanel trendContextPanel) {
+        JPanel panel = new JPanel(new MigLayout(
+                "insets 0, fillx, novisualpadding, hidemode 3, gap 0",
+                "[]",
+                "[]"
+        ));
+        panel.setOpaque(false);
+        panel.add(tableContextPanel);
+        panel.add(reportContextPanel);
+        panel.add(trendContextPanel);
+        return panel;
     }
 
     private JPanel createResultToolbarLeftPanel(JPanel switcher, JPanel contextCards) {
@@ -660,20 +711,17 @@ final class PerformancePanelViewFactory {
                                         JToggleButton resultTableButton,
                                         JToggleButton reportButton,
                                         JToggleButton trendButton,
-                                        JPanel contextCards) {
+                                        JPanel tableContextPanel,
+                                        JPanel reportContextPanel,
+                                        JPanel trendContextPanel) {
         int selectedIndex = resultTabbedPane.getSelectedIndex();
         resultTableButton.setSelected(selectedIndex == RESULT_TAB_TABLE);
         reportButton.setSelected(selectedIndex == RESULT_TAB_REPORT);
         trendButton.setSelected(selectedIndex == RESULT_TAB_TREND);
 
-        CardLayout contextLayout = (CardLayout) contextCards.getLayout();
-        if (selectedIndex == RESULT_TAB_REPORT) {
-            contextLayout.show(contextCards, RESULT_CONTEXT_REPORT);
-        } else if (selectedIndex == RESULT_TAB_TREND) {
-            contextLayout.show(contextCards, RESULT_CONTEXT_TREND);
-        } else {
-            contextLayout.show(contextCards, RESULT_CONTEXT_TABLE);
-        }
+        tableContextPanel.setVisible(selectedIndex == RESULT_TAB_TABLE);
+        reportContextPanel.setVisible(selectedIndex == RESULT_TAB_REPORT);
+        trendContextPanel.setVisible(selectedIndex == RESULT_TAB_TREND);
     }
 
     private RequestEditorSection createRequestEditorSection(RequestEditSubPanel requestEditSubPanel) {
@@ -686,7 +734,7 @@ final class PerformancePanelViewFactory {
         return new RequestEditorSection(wrapper, requestEditorHost);
     }
 
-    record TreeSection(JTree tree, JScrollPane scrollPane) {
+    record TreeSection(JTree tree, JScrollPane scrollPane, JComponent contentPanel) {
     }
 
     record PropertySection(JPanel propertyPanel,

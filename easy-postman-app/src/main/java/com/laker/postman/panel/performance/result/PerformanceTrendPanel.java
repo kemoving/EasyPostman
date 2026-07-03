@@ -7,12 +7,13 @@ import com.laker.postman.performance.core.model.PerformanceTrendSnapshot;
 import com.laker.postman.common.UiSingletonPanel;
 import com.laker.postman.common.component.ToolWindowActionToolbar;
 import com.laker.postman.common.component.ToolWindowSurfaceStyle;
-import com.laker.postman.common.component.button.SegmentedButtonGroupPanel;
-import com.laker.postman.common.component.button.SegmentedToggleButton;
+import com.laker.postman.common.component.button.SegmentedButtonBar;
+import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.performance.model.PerformanceProtocolLabels;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
+import net.miginfocom.swing.MigLayout;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -34,10 +35,13 @@ import java.awt.*;
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 public class PerformanceTrendPanel extends UiSingletonPanel implements PerformanceTrendView {
 
@@ -89,6 +93,13 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
     private final TimeSeries sseErrorRateSeries = new TimeSeries(I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_ERROR_RATE_PERCENT));
 
     private final List<TrendView> trendViews = new ArrayList<>();
+    private final Map<PerformanceProtocol, JToggleButton> protocolButtons = new EnumMap<>(PerformanceProtocol.class);
+    private JPanel protocolSwitcherRow;
+    private JComponent protocolSwitcher;
+    private JPanel metricControlsCards;
+    private JPanel protocolCards;
+    private PerformanceProtocol selectedProtocol = PerformanceProtocol.HTTP;
+    private Set<PerformanceProtocol> availableProtocols = EnumSet.of(PerformanceProtocol.HTTP);
     private Long trendDomainStartMs;
     private Long trendDomainEndMs;
     private String chartMode = SEPARATE_VIEW;
@@ -98,18 +109,27 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
         configureSeriesRetention();
         setLayout(new BorderLayout());
         ToolWindowSurfaceStyle.applyCard(this);
-        JPanel protocolCards = new JPanel(new CardLayout());
+        protocolCards = new JPanel(new CardLayout());
+        metricControlsCards = new JPanel(new CardLayout());
         ToolWindowSurfaceStyle.applyCard(protocolCards);
-        protocolCards.add(createHttpPanel(), PerformanceProtocol.HTTP.name());
-        protocolCards.add(createWebSocketPanel(), PerformanceProtocol.WEBSOCKET.name());
-        protocolCards.add(createSsePanel(), PerformanceProtocol.SSE.name());
-        add(createToolbar(protocolCards), BorderLayout.NORTH);
+        metricControlsCards.setOpaque(false);
+        protocolCards.add(createHttpPanel(metricControlsCards), PerformanceProtocol.HTTP.name());
+        protocolCards.add(createWebSocketPanel(metricControlsCards), PerformanceProtocol.WEBSOCKET.name());
+        protocolCards.add(createSsePanel(metricControlsCards), PerformanceProtocol.SSE.name());
+        add(createToolbar(protocolCards, metricControlsCards), BorderLayout.NORTH);
         add(protocolCards, BorderLayout.CENTER);
+        applyAvailableProtocols();
     }
 
     @Override
     protected void registerListeners() {
         // Charts are updated by PerformanceStatisticsCoordinator.
+    }
+
+    @Override
+    public void setAvailableProtocols(Set<PerformanceProtocol> protocols) {
+        availableProtocols = normalizeProtocols(protocols);
+        applyAvailableProtocols();
     }
 
     private void configureSeriesRetention() {
@@ -118,8 +138,10 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
         }
     }
 
-    private JPanel createHttpPanel() {
+    private JPanel createHttpPanel(JPanel metricControlsCards) {
         return createTrendView(
+                metricControlsCards,
+                PerformanceProtocol.HTTP,
                 MessageKeys.PERFORMANCE_TREND_METRICS,
                 new SeriesSpec(httpVirtualUsersSeries, PerformanceTrendTheme.threadsLine(), true, AxisFormat.INTEGER),
                 new SeriesSpec(httpRpsSeries, PerformanceTrendTheme.qpsLine(), true, AxisFormat.DECIMAL),
@@ -128,8 +150,10 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
         );
     }
 
-    private JPanel createWebSocketPanel() {
+    private JPanel createWebSocketPanel(JPanel metricControlsCards) {
         return createTrendView(
+                metricControlsCards,
+                PerformanceProtocol.WEBSOCKET,
                 MessageKeys.PERFORMANCE_TREND_METRICS,
                 new SeriesSpec(wsActiveSeries, PerformanceTrendTheme.threadsLine(), true, AxisFormat.INTEGER),
                 new SeriesSpec(wsSentRateSeries, PerformanceTrendTheme.matchedLine(), true, AxisFormat.DECIMAL),
@@ -138,8 +162,10 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
         );
     }
 
-    private JPanel createSsePanel() {
+    private JPanel createSsePanel(JPanel metricControlsCards) {
         return createTrendView(
+                metricControlsCards,
+                PerformanceProtocol.SSE,
                 MessageKeys.PERFORMANCE_TREND_METRICS,
                 new SeriesSpec(sseActiveSeries, PerformanceTrendTheme.threadsLine(), true, AxisFormat.INTEGER),
                 new SeriesSpec(sseEventRateSeries, PerformanceTrendTheme.qpsLine(), true, AxisFormat.DECIMAL),
@@ -147,59 +173,139 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
         );
     }
 
-    private JPanel createTrendView(String titleKey, SeriesSpec... specs) {
+    private JPanel createTrendView(JPanel metricControlsCards,
+                                   PerformanceProtocol protocol,
+                                   String titleKey,
+                                   SeriesSpec... specs) {
         TrendView view = new TrendView(titleKey, specs);
         trendViews.add(view);
+        metricControlsCards.add(view.controlsPanel(), protocol.name());
         return view.panel();
     }
 
-    private JPanel createToolbar(JPanel protocolCards) {
-        JPanel toolbar = new JPanel(new BorderLayout(8, 0));
-        ToolWindowSurfaceStyle.applyCard(toolbar);
-        toolbar.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
-        toolbar.add(ToolWindowActionToolbar.inlineLeft(createProtocolSwitcher(protocolCards)), BorderLayout.WEST);
-        toolbar.add(ToolWindowActionToolbar.inlineRight(createModeSwitcher()), BorderLayout.EAST);
+    private JPanel createToolbar(JPanel protocolCards, JPanel metricControlsCards) {
+        JPanel toolbar = new JPanel(new MigLayout(
+                "insets 0, fillx, novisualpadding, hidemode 3, gap 0",
+                "[grow,fill]",
+                "[]6[]"
+        ));
+        ToolWindowSurfaceStyle.applyToolWindowToolbarSeparator(toolbar, 7, 10, 8, 10);
+        protocolSwitcherRow = createProtocolSwitcher();
+        toolbar.add(protocolSwitcherRow, "growx, wrap");
+        toolbar.add(createMetricSelector(metricControlsCards), "growx, wmin 0");
         return toolbar;
     }
 
-    private JPanel createProtocolSwitcher(JPanel protocolCards) {
-        ButtonGroup protocolGroup = new ButtonGroup();
-        JPanel switcher = new SegmentedButtonGroupPanel(FlowLayout.LEFT);
-        switcher.setOpaque(false);
+    private JPanel createMetricSelector(JPanel metricControlsCards) {
+        JPanel panel = new JPanel(new MigLayout(
+                "insets 0, fillx, novisualpadding, gap 0",
+                "[]8[grow,fill]",
+                "[]"
+        ));
+        panel.setOpaque(false);
+
+        JLabel label = new JLabel(I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_METRIC_FILTERS));
+        label.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        label.setForeground(ModernColors.getTextSecondary());
+
+        panel.add(label);
+        panel.add(metricControlsCards, "growx, wmin 0");
+        return panel;
+    }
+
+    private JPanel createProtocolSwitcher() {
+        JPanel row = new JPanel(new MigLayout(
+                "insets 0, fillx, novisualpadding, hidemode 3, gap 0",
+                "[pref!,left]push[]",
+                "[]"
+        ));
+        row.setOpaque(false);
+        SegmentedButtonBar<PerformanceProtocol> switcher = new SegmentedButtonBar<>(FlowLayout.LEFT);
         for (PerformanceProtocol protocol : PerformanceProtocol.values()) {
-            JToggleButton button = new SegmentedToggleButton(
+            JToggleButton button = switcher.addOption(
+                    protocol,
                     PerformanceProtocolLabels.displayName(protocol),
                     protocol == PerformanceProtocol.HTTP
             );
             button.addActionListener(e -> {
-                CardLayout layout = (CardLayout) protocolCards.getLayout();
-                layout.show(protocolCards, protocol.name());
+                if (button.isSelected()) {
+                    showProtocol(protocol);
+                }
             });
-            protocolGroup.add(button);
-            switcher.add(button);
+            protocolButtons.put(protocol, button);
         }
-        return switcher;
+        protocolSwitcher = switcher;
+        row.add(switcher);
+        row.add(ToolWindowActionToolbar.inlineRight(createModeSwitcher()), "align right");
+        return row;
+    }
+
+    private void applyAvailableProtocols() {
+        if (protocolCards == null || metricControlsCards == null || protocolSwitcherRow == null) {
+            return;
+        }
+        for (Map.Entry<PerformanceProtocol, JToggleButton> entry : protocolButtons.entrySet()) {
+            entry.getValue().setVisible(availableProtocols.contains(entry.getKey()));
+        }
+        if (!availableProtocols.contains(selectedProtocol)) {
+            selectedProtocol = firstAvailableProtocol();
+        }
+        protocolSwitcher.setVisible(availableProtocols.size() > 1);
+        protocolSwitcherRow.setVisible(true);
+        showProtocol(selectedProtocol);
+        revalidate();
+        repaint();
+    }
+
+    private PerformanceProtocol firstAvailableProtocol() {
+        if (availableProtocols.contains(PerformanceProtocol.HTTP)) {
+            return PerformanceProtocol.HTTP;
+        }
+        for (PerformanceProtocol protocol : PerformanceProtocol.values()) {
+            if (availableProtocols.contains(protocol)) {
+                return protocol;
+            }
+        }
+        return PerformanceProtocol.HTTP;
+    }
+
+    private void showProtocol(PerformanceProtocol protocol) {
+        selectedProtocol = protocol;
+        JToggleButton button = protocolButtons.get(protocol);
+        if (button != null && !button.isSelected()) {
+            button.setSelected(true);
+        }
+        CardLayout layout = (CardLayout) protocolCards.getLayout();
+        layout.show(protocolCards, protocol.name());
+        CardLayout controlsLayout = (CardLayout) metricControlsCards.getLayout();
+        controlsLayout.show(metricControlsCards, protocol.name());
+    }
+
+    private static Set<PerformanceProtocol> normalizeProtocols(Set<PerformanceProtocol> protocols) {
+        EnumSet<PerformanceProtocol> normalized = EnumSet.noneOf(PerformanceProtocol.class);
+        if (protocols != null) {
+            normalized.addAll(protocols);
+        }
+        if (normalized.isEmpty()) {
+            normalized.add(PerformanceProtocol.HTTP);
+        }
+        return normalized;
     }
 
     private JPanel createModeSwitcher() {
-        JToggleButton separateButton = new SegmentedToggleButton(
+        SegmentedButtonBar<String> modePanel = new SegmentedButtonBar<>(FlowLayout.RIGHT);
+        JToggleButton separateButton = modePanel.addOption(
+                SEPARATE_VIEW,
                 I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_SEPARATE_CHARTS),
                 true
         );
-        JToggleButton combinedButton = new SegmentedToggleButton(
+        JToggleButton combinedButton = modePanel.addOption(
+                COMBINED_VIEW,
                 I18nUtil.getMessage(MessageKeys.PERFORMANCE_TREND_COMBINED_CHART),
                 false
         );
-        ButtonGroup modeGroup = new ButtonGroup();
-        modeGroup.add(separateButton);
-        modeGroup.add(combinedButton);
         separateButton.addActionListener(e -> showChartMode(SEPARATE_VIEW));
         combinedButton.addActionListener(e -> showChartMode(COMBINED_VIEW));
-
-        JPanel modePanel = new SegmentedButtonGroupPanel(FlowLayout.RIGHT);
-        modePanel.setOpaque(false);
-        modePanel.add(separateButton);
-        modePanel.add(combinedButton);
         return modePanel;
     }
 
@@ -572,6 +678,7 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
 
     private final class TrendView {
         private final JPanel panel;
+        private final JPanel controlsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         private final JPanel splitChartsPanel = new ScrollableChartGridPanel();
         private final JPanel chartCards = new JPanel(new CardLayout());
         private final TimeSeriesCollection combinedDataset = new TimeSeriesCollection();
@@ -584,9 +691,7 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
             ToolWindowSurfaceStyle.applyCard(panel);
             panel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
-            JPanel controlsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-            ToolWindowSurfaceStyle.applyCard(controlsPanel);
-            controlsPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+            controlsPanel.setOpaque(false);
             for (SeriesSpec spec : specs) {
                 JCheckBox checkBox = new JCheckBox(spec.series().getKey().toString(), spec.selected());
                 checkBox.setOpaque(false);
@@ -611,7 +716,6 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
             chartCards.add(splitScrollPane, SEPARATE_VIEW);
             chartCards.add(combinedChartPanel, COMBINED_VIEW);
 
-            panel.add(controlsPanel, BorderLayout.NORTH);
             panel.add(chartCards, BorderLayout.CENTER);
             rebuildCharts();
             showChartMode(chartMode);
@@ -619,6 +723,10 @@ public class PerformanceTrendPanel extends UiSingletonPanel implements Performan
 
         private JPanel panel() {
             return panel;
+        }
+
+        private JPanel controlsPanel() {
+            return controlsPanel;
         }
 
         private int selectedCount() {

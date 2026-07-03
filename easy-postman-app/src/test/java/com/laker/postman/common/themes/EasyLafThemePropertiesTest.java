@@ -35,6 +35,11 @@ public class EasyLafThemePropertiesTest {
             "TabbedPane.hoverColor",
             "TabbedPane.tabSeparatorColor"
     );
+    private static final List<String> REQUIRED_BUTTON_STYLE_KEYS = List.of(
+            "[style]Button.easyPostmanPrimary",
+            "[style]Button.easyPostmanSecondary",
+            "[style]ToggleButton.easyPostmanToggle"
+    );
 
     private LookAndFeel previousLookAndFeel;
 
@@ -61,6 +66,12 @@ public class EasyLafThemePropertiesTest {
     public void shouldDefineSharedComponentSurfaceDefaultsForBuiltInThemes() throws Exception {
         assertDefinesComponentSurfaceColors("com/laker/postman/common/themes/EasyLightLaf.properties");
         assertDefinesComponentSurfaceColors("com/laker/postman/common/themes/EasyDarkLaf.properties");
+    }
+
+    @Test
+    public void shouldDefineModernButtonStyleClassesForBuiltInThemes() throws Exception {
+        assertDefinesButtonStyleClasses("com/laker/postman/common/themes/EasyLightLaf.properties");
+        assertDefinesButtonStyleClasses("com/laker/postman/common/themes/EasyDarkLaf.properties");
     }
 
     @Test
@@ -118,6 +129,15 @@ public class EasyLafThemePropertiesTest {
         assertEquals(UIManager.getColor("ToggleButton.toolbar.selectedForeground"), Color.WHITE);
     }
 
+    @Test
+    public void disabledButtonBackgroundShouldRemainVisibleBehindDisabledText() {
+        assertTrue(EasyLightLaf.setup());
+        assertReadableDisabledButtonContrast();
+
+        assertTrue(EasyDarkLaf.setup());
+        assertReadableDisabledButtonContrast();
+    }
+
     private void assertDefinesThemeColors(String resourcePath) throws Exception {
         Properties properties = loadProperties(resourcePath);
 
@@ -134,12 +154,30 @@ public class EasyLafThemePropertiesTest {
         }
     }
 
+    private void assertDefinesButtonStyleClasses(String resourcePath) throws Exception {
+        Properties properties = loadProperties(resourcePath);
+
+        for (String key : REQUIRED_BUTTON_STYLE_KEYS) {
+            assertTrue(properties.containsKey(key), resourcePath + " must define " + key);
+            String style = properties.getProperty(key);
+            assertTrue(!style.contains("buttonType: roundRect"), key + " must avoid pill-like FlatLaf roundRect type");
+            assertTrue(style.contains("arc: 8"), key + " must keep a moderate 8px button arc");
+            assertTrue(style.contains("focusWidth: 0"),
+                    key + " must avoid a second outer focus ring on compact action buttons");
+            assertTrue(style.contains("innerFocusWidth: 0"),
+                    key + " must keep compact action button borders visually single-weight");
+            assertTrue(style.contains("margin: 4,12,4,12"),
+                    key + " must keep shared action buttons compact enough for request toolbars");
+        }
+    }
+
     private void clearThemeAssertionKeys() {
         for (String key : REQUIRED_COMPONENT_SURFACE_KEYS) {
             UIManager.getDefaults().remove(key);
         }
         for (String key : List.of(
                 ThemeColors.TEXT_PRIMARY,
+                ThemeColors.TEXT_DISABLED,
                 ThemeColors.BACKGROUND,
                 ThemeColors.SURFACE,
                 ThemeColors.WINDOW_CHROME_BACKGROUND,
@@ -150,6 +188,7 @@ public class EasyLafThemePropertiesTest {
                 ThemeColors.TAB_SEPARATOR,
                 ThemeColors.PRIMARY,
                 ThemeColors.SELECTION_BACKGROUND,
+                ThemeColors.BUTTON_DISABLED_BACKGROUND,
                 ThemeColors.CONSOLE_SELECTION_BACKGROUND,
                 "Component.accentColor",
                 "Component.focusColor",
@@ -231,5 +270,33 @@ public class EasyLafThemePropertiesTest {
         assertEquals(UIManager.getColor("MenuBar.background"), expected);
         assertEquals(UIManager.getColor("TitlePane.background"), expected);
         assertEquals(UIManager.getColor("TitlePane.inactiveBackground"), expected);
+    }
+
+    private void assertReadableDisabledButtonContrast() {
+        Color background = UIManager.getColor(ThemeColors.BUTTON_DISABLED_BACKGROUND);
+        Color foreground = UIManager.getColor(ThemeColors.TEXT_DISABLED);
+
+        assertTrue(contrastRatio(background, foreground) >= 2.0,
+                "Disabled button background should not collapse into disabled text");
+    }
+
+    private double contrastRatio(Color first, Color second) {
+        double firstLuminance = relativeLuminance(first);
+        double secondLuminance = relativeLuminance(second);
+        double lighter = Math.max(firstLuminance, secondLuminance);
+        double darker = Math.min(firstLuminance, secondLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    private double relativeLuminance(Color color) {
+        double red = linearRgb(color.getRed());
+        double green = linearRgb(color.getGreen());
+        double blue = linearRgb(color.getBlue());
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    }
+
+    private double linearRgb(int value) {
+        double channel = value / 255.0;
+        return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
     }
 }

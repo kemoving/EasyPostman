@@ -23,11 +23,14 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -171,6 +174,31 @@ public class ToolWindowSurfaceStyleTest {
     }
 
     @Test
+    public void shouldRemoveThemeRefreshListenerWhenComponentIsNoLongerDisplayable() throws Exception {
+        JPanel panel = new JPanel();
+        int initialListeners = UIManager.getPropertyChangeListeners().length;
+
+        ToolWindowSurfaceStyle.applyCard(panel);
+
+        assertEquals(UIManager.getPropertyChangeListeners().length, initialListeners + 1);
+
+        HierarchyEvent displayabilityChanged = new HierarchyEvent(
+                panel,
+                HierarchyEvent.HIERARCHY_CHANGED,
+                panel,
+                null,
+                HierarchyEvent.DISPLAYABILITY_CHANGED
+        );
+        for (HierarchyListener listener : panel.getHierarchyListeners()) {
+            listener.hierarchyChanged(displayabilityChanged);
+        }
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        assertEquals(UIManager.getPropertyChangeListeners().length, initialListeners);
+    }
+
+    @Test
     public void shouldApplySectionHeaderSurfaceAndPadding() {
         Color surface = new Color(250, 251, 252);
         UIManager.put(ThemeColors.SURFACE, surface);
@@ -185,6 +213,30 @@ public class ToolWindowSurfaceStyleTest {
         assertEquals(panel.getInsets().left, 2);
         assertEquals(panel.getInsets().bottom, 3);
         assertEquals(panel.getInsets().right, 4);
+    }
+
+    @Test
+    public void shouldApplyToolWindowToolbarSeparatorWithThemeColorAndPadding() {
+        Color surface = new Color(250, 251, 252);
+        Color separator = new Color(229, 231, 235);
+        UIManager.put(ThemeColors.SURFACE, surface);
+        UIManager.put(ThemeColors.TAB_SEPARATOR, separator);
+        JPanel panel = new JPanel();
+
+        ToolWindowSurfaceStyle.applyToolWindowToolbarSeparator(panel, 4, 6, 4, 6);
+
+        assertTrue(panel.isOpaque());
+        assertEquals(panel.getBackground(), surface);
+        assertTrue(panel.getBorder() instanceof CompoundBorder);
+        CompoundBorder border = (CompoundBorder) panel.getBorder();
+        assertTrue(border.getOutsideBorder() instanceof MatteBorder);
+        MatteBorder separatorBorder = (MatteBorder) border.getOutsideBorder();
+        assertEquals(separatorBorder.getBorderInsets(panel).bottom, 1);
+        assertEquals(separatorBorder.getMatteColor(), separator);
+        assertEquals(panel.getInsets().top, 4);
+        assertEquals(panel.getInsets().left, 6);
+        assertEquals(panel.getInsets().bottom, 5);
+        assertEquals(panel.getInsets().right, 6);
     }
 
     @Test

@@ -9,7 +9,8 @@ import com.laker.postman.platform.update.model.UpdatePolicy;
 import com.laker.postman.platform.update.model.UpdateTarget;
 import com.laker.postman.settings.PreferencesStore;
 import com.laker.postman.settings.SettingKey;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.service.sync.WebDavSyncSettings;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,6 +36,12 @@ public class SettingManager {
             AppSettingKeys.MIN_PERFORMANCE_RESULT_ROW_LIMIT;
     public static final int MAX_PERFORMANCE_RESULT_ROW_LIMIT =
             AppSettingKeys.MAX_PERFORMANCE_RESULT_ROW_LIMIT;
+    public static final int DEFAULT_GIT_DIFF_LARGE_FILE_THRESHOLD_MB =
+            AppSettingKeys.DEFAULT_GIT_DIFF_LARGE_FILE_THRESHOLD_MB;
+    public static final int MIN_GIT_DIFF_LARGE_FILE_THRESHOLD_MB =
+            AppSettingKeys.MIN_GIT_DIFF_LARGE_FILE_THRESHOLD_MB;
+    public static final int MAX_GIT_DIFF_LARGE_FILE_THRESHOLD_MB =
+            AppSettingKeys.MAX_GIT_DIFF_LARGE_FILE_THRESHOLD_MB;
     public static final String PROXY_MODE_MANUAL = "MANUAL";
     public static final String PROXY_MODE_SYSTEM = "SYSTEM";
     public static final String PROXY_TYPE_HTTP = "HTTP";
@@ -68,7 +75,7 @@ public class SettingManager {
     private static void initializeNotificationPosition() {
         try {
             NotificationPosition position = getNotificationPosition();
-            NotificationUtil.setDefaultPosition(position);
+            NotificationCenter.setDefaultPosition(position);
         } catch (Exception e) {
             // 如果解析失败，使用默认值
             log.error("Error initializing notification position", e);
@@ -254,6 +261,26 @@ public class SettingManager {
 
     public static int sanitizePerformanceResultRowLimit(Integer rowLimit) {
         return AppSettingKeys.sanitizePerformanceResultRowLimit(rowLimit);
+    }
+
+    public static int getGitDiffLargeFileThresholdMb() {
+        return get(AppSettingKeys.GIT_DIFF_LARGE_FILE_THRESHOLD_MB);
+    }
+
+    public static void setGitDiffLargeFileThresholdMb(int thresholdMb) {
+        put(AppSettingKeys.GIT_DIFF_LARGE_FILE_THRESHOLD_MB, thresholdMb);
+    }
+
+    public static int sanitizeGitDiffLargeFileThresholdMb(Integer thresholdMb) {
+        return AppSettingKeys.sanitizeGitDiffLargeFileThresholdMb(thresholdMb);
+    }
+
+    public static long gitDiffLargeFileThresholdBytes(int thresholdMb) {
+        return sanitizeGitDiffLargeFileThresholdMb(thresholdMb) * 1024L * 1024L;
+    }
+
+    public static long getGitDiffLargeFileThresholdBytes() {
+        return gitDiffLargeFileThresholdBytes(getGitDiffLargeFileThresholdMb());
     }
 
     public static String getCsvLastImportDirectory() {
@@ -733,6 +760,39 @@ public class SettingManager {
         put(AppSettingKeys.PROXY_SSL_VERIFICATION_DISABLED, disabled);
         // 清除客户端缓存以应用新的 SSL 设置
         OkHttpClientManager.clearClientCache();
+    }
+
+    // ===== WebDAV 同步设置 =====
+
+    public static WebDavSyncSettings getWebDavSyncSettings() {
+        return new WebDavSyncSettings(
+                get(AppSettingKeys.WEBDAV_SYNC_ENABLED),
+                get(AppSettingKeys.WEBDAV_SYNC_SERVER_URL),
+                get(AppSettingKeys.WEBDAV_SYNC_REMOTE_DIRECTORY),
+                get(AppSettingKeys.WEBDAV_SYNC_USERNAME),
+                get(AppSettingKeys.WEBDAV_SYNC_PASSWORD)
+        );
+    }
+
+    public static void setWebDavSyncSettings(WebDavSyncSettings settings) {
+        WebDavSyncSettings normalized = settings == null
+                ? new WebDavSyncSettings(false, "", WebDavSyncSettings.DEFAULT_REMOTE_DIRECTORY, "", "")
+                : settings;
+        updateAndSaveProperties(properties -> {
+            AppSettingKeys.WEBDAV_SYNC_ENABLED.write(properties, normalized.enabled());
+            AppSettingKeys.WEBDAV_SYNC_SERVER_URL.write(properties, normalized.serverUrl());
+            AppSettingKeys.WEBDAV_SYNC_REMOTE_DIRECTORY.write(properties, normalized.remoteDirectory());
+            AppSettingKeys.WEBDAV_SYNC_USERNAME.write(properties, normalized.username());
+            AppSettingKeys.WEBDAV_SYNC_PASSWORD.write(properties, normalized.password());
+        });
+    }
+
+    public static long getWebDavSyncLastSyncTime() {
+        return get(AppSettingKeys.WEBDAV_SYNC_LAST_SYNC_TIME);
+    }
+
+    public static void setWebDavSyncLastSyncTime(long timestamp) {
+        put(AppSettingKeys.WEBDAV_SYNC_LAST_SYNC_TIME, timestamp);
     }
 
     // ===== UI 字体设置 =====

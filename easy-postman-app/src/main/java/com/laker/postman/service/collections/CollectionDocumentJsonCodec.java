@@ -7,6 +7,7 @@ import com.laker.postman.collection.model.CollectionDocument;
 import com.laker.postman.collection.model.CollectionNode;
 import com.laker.postman.collection.model.RequestGroup;
 import com.laker.postman.model.Variable;
+import com.laker.postman.request.model.AuthApiKeyPlacement;
 import com.laker.postman.request.model.HttpHeader;
 import com.laker.postman.request.model.HttpRequestItem;
 import lombok.experimental.UtilityClass;
@@ -69,6 +70,9 @@ public class CollectionDocumentJsonCodec {
         groupJson.set("authUsername", group.getAuthUsername());
         groupJson.set("authPassword", group.getAuthPassword());
         groupJson.set("authToken", group.getAuthToken());
+        groupJson.set("authApiKeyName", group.getAuthApiKeyName());
+        groupJson.set("authApiKeyValue", group.getAuthApiKeyValue());
+        groupJson.set("authApiKeyPlacement", group.getAuthApiKeyPlacement());
         groupJson.set("prescript", group.getPrescript());
         groupJson.set("postscript", group.getPostscript());
         if (group.getHeaders() != null && !group.getHeaders().isEmpty()) {
@@ -91,6 +95,7 @@ public class CollectionDocumentJsonCodec {
     }
 
     private JSONObject toRequestJson(HttpRequestItem requestItem) {
+        SavedResponseSnapshotMapper.sanitizeSavedResponses(requestItem);
         JSONObject requestJson = new JSONObject();
         requestJson.set("type", "request");
         requestJson.set("data", JSONUtil.parseObj(requestItem));
@@ -115,6 +120,12 @@ public class CollectionDocumentJsonCodec {
             group.setAuthUsername(groupJson.getStr("authUsername", ""));
             group.setAuthPassword(groupJson.getStr("authPassword", ""));
             group.setAuthToken(groupJson.getStr("authToken", ""));
+            group.setAuthApiKeyName(groupJson.getStr("authApiKeyName", ""));
+            group.setAuthApiKeyValue(groupJson.getStr("authApiKeyValue", ""));
+            group.setAuthApiKeyPlacement(groupJson.getStr(
+                    "authApiKeyPlacement",
+                    AuthApiKeyPlacement.HEADER.getConstant()
+            ));
         }
         if (groupJson.containsKey("prescript")) {
             group.setPrescript(groupJson.getStr("prescript", ""));
@@ -158,6 +169,7 @@ public class CollectionDocumentJsonCodec {
         JSONObject dataJson = requestJson.getJSONObject("data");
         HttpRequestItem item = JSONUtil.toBean(dataJson, HttpRequestItem.class);
         item.setBody(item.getBody() != null ? item.getBody() : "");
+        SavedResponseSnapshotMapper.sanitizeSavedResponses(item);
         if (item.getId() == null || item.getId().isEmpty()) {
             throw new IllegalArgumentException("Collection request is missing required id: " + item.getName());
         }

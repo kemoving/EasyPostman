@@ -2,6 +2,7 @@ package com.laker.postman.panel.topmenu.setting;
 
 import com.laker.postman.common.UiSingletonFactory;
 import com.laker.postman.common.component.ToolWindowSurfaceStyle;
+import com.laker.postman.common.component.setting.SettingsFieldRow;
 import com.laker.postman.common.component.setting.SettingsHintLabel;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.model.NotificationPosition;
@@ -13,7 +14,7 @@ import com.laker.postman.util.FontManager;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
+import com.laker.postman.common.component.notification.NotificationCenter;
 import com.laker.postman.util.UiFontCatalog;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,6 +30,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.awt.*;
 
@@ -42,13 +44,14 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
 
     private JCheckBox showDownloadProgressCheckBox;
     private JTextField downloadProgressDialogThresholdField;
+    private JTextField gitDiffLargeFileThresholdField;
     private JTextField maxHistoryCountField;
     private JTextField maxOpenedRequestsCountField;
     private JCheckBox autoFormatResponseCheckBox;
     private JCheckBox startupSplashCheckBox;
     private JCheckBox sidebarExpandedCheckBox;
     private JComboBox<String> notificationPositionComboBox;
-    private JLabel downloadProgressDialogThresholdLabel;
+    private SettingsFieldRow downloadProgressDialogThresholdRow;
     private JComboBox<String> fontNameComboBox;
     private JTextField fontSizeField;
     private JLabel fontPreviewLabel;
@@ -65,7 +68,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         // 下载设置区域
         JPanel downloadSection = createModernSection(
                 I18nUtil.getMessage(MessageKeys.SETTINGS_DOWNLOAD_TITLE),
-                "" // 移除英文描述，保持简洁
+                ""
         );
 
         // 显示下载进度对话框
@@ -84,23 +87,24 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         downloadProgressDialogThresholdField = new JTextField(10);
         int thresholdMB = SettingManager.getDownloadProgressDialogThreshold() / (1024 * 1024);
         downloadProgressDialogThresholdField.setText(String.valueOf(thresholdMB));
+        String downloadThresholdLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_DOWNLOAD_THRESHOLD);
+        int downloadFieldLabelWidth = calculateFieldLabelWidth(List.of(downloadThresholdLabel));
 
-        JPanel thresholdRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_DOWNLOAD_THRESHOLD),
+        downloadProgressDialogThresholdRow = createFieldRow(
+                downloadThresholdLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_DOWNLOAD_THRESHOLD_TOOLTIP),
-                downloadProgressDialogThresholdField
+                downloadProgressDialogThresholdField,
+                downloadFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
-        downloadSection.add(thresholdRow);
+        downloadSection.add(downloadProgressDialogThresholdRow);
 
         // 设置阈值字段的启用状态
-        downloadProgressDialogThresholdLabel = (JLabel) thresholdRow.getComponent(0);
-        downloadProgressDialogThresholdField.setEnabled(showDownloadProgressCheckBox.isSelected());
-        downloadProgressDialogThresholdLabel.setEnabled(showDownloadProgressCheckBox.isSelected());
+        downloadProgressDialogThresholdRow.setEnabled(showDownloadProgressCheckBox.isSelected());
 
         showDownloadProgressCheckBox.addItemListener(e -> {
             boolean selected = e.getStateChange() == java.awt.event.ItemEvent.SELECTED;
-            downloadProgressDialogThresholdField.setEnabled(selected);
-            downloadProgressDialogThresholdLabel.setEnabled(selected);
+            downloadProgressDialogThresholdRow.setEnabled(selected);
         });
 
         contentPanel.add(downloadSection);
@@ -109,16 +113,30 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         // 通用设置区域
         JPanel generalSection = createModernSection(
                 I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_TITLE),
-                "" // 移除英文描述
+                ""
         );
+        String maxHistoryLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_HISTORY);
+        String maxOpenedRequestsLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_OPENED_REQUESTS);
+        String gitDiffThresholdLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD);
+        String sidebarTabsLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS);
+        String notificationPositionLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_NOTIFICATION_POSITION);
+        int generalFieldLabelWidth = calculateFieldLabelWidth(List.of(
+                maxHistoryLabel,
+                maxOpenedRequestsLabel,
+                gitDiffThresholdLabel,
+                sidebarTabsLabel,
+                notificationPositionLabel
+        ));
 
         // 历史记录数量
         maxHistoryCountField = new JTextField(10);
         maxHistoryCountField.setText(String.valueOf(SettingManager.getMaxHistoryCount()));
         JPanel historyRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_HISTORY),
+                maxHistoryLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_HISTORY_TOOLTIP),
-                maxHistoryCountField
+                maxHistoryCountField,
+                generalFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
         generalSection.add(historyRow);
         generalSection.add(createVerticalSpace(FIELD_SPACING));
@@ -127,11 +145,25 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         maxOpenedRequestsCountField = new JTextField(10);
         maxOpenedRequestsCountField.setText(String.valueOf(SettingManager.getMaxOpenedRequestsCount()));
         JPanel requestsRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_OPENED_REQUESTS),
+                maxOpenedRequestsLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_MAX_OPENED_REQUESTS_TOOLTIP),
-                maxOpenedRequestsCountField
+                maxOpenedRequestsCountField,
+                generalFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
         generalSection.add(requestsRow);
+        generalSection.add(createVerticalSpace(FIELD_SPACING));
+
+        gitDiffLargeFileThresholdField = new JTextField(10);
+        gitDiffLargeFileThresholdField.setText(String.valueOf(SettingManager.getGitDiffLargeFileThresholdMb()));
+        JPanel gitDiffThresholdRow = createFieldRow(
+                gitDiffThresholdLabel,
+                I18nUtil.getMessage(MessageKeys.SETTINGS_GIT_DIFF_LARGE_FILE_THRESHOLD_TOOLTIP),
+                gitDiffLargeFileThresholdField,
+                generalFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
+        );
+        generalSection.add(gitDiffThresholdRow);
         generalSection.add(createVerticalSpace(FIELD_SPACING));
 
         // 自动格式化响应体
@@ -169,7 +201,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         generalSection.add(sidebarRow);
         generalSection.add(createVerticalSpace(FIELD_SPACING));
 
-        JPanel sidebarTabsRow = createSidebarTabsRow();
+        JPanel sidebarTabsRow = createSidebarTabsRow(generalFieldLabelWidth);
         generalSection.add(sidebarTabsRow);
         generalSection.add(createVerticalSpace(FIELD_SPACING));
 
@@ -186,9 +218,11 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         notificationPositionComboBox.setSelectedIndex(currentPosition.getIndex());
 
         JPanel notificationPositionRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_NOTIFICATION_POSITION),
+                notificationPositionLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_NOTIFICATION_POSITION_TOOLTIP),
-                notificationPositionComboBox
+                notificationPositionComboBox,
+                generalFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
         generalSection.add(notificationPositionRow);
 
@@ -200,6 +234,9 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 I18nUtil.getMessage(MessageKeys.SETTINGS_UI_TITLE),
                 I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_RESTART_RECOMMENDED)
         );
+        String fontNameLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_NAME);
+        String fontSizeLabel = I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_SIZE);
+        int fontFieldLabelWidth = calculateFieldLabelWidth(List.of(fontNameLabel, fontSizeLabel));
 
         // 创建字体选择下拉框，添加"系统默认"选项
         fontNameComboBox = new JComboBox<>();
@@ -231,9 +268,11 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         });
 
         JPanel fontNameRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_NAME),
+                fontNameLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_NAME_TOOLTIP),
-                fontNameComboBox
+                fontNameComboBox,
+                fontFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
         fontSection.add(fontNameRow);
         fontSection.add(createVerticalSpace(FIELD_SPACING));
@@ -242,9 +281,11 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         fontSizeField = new JTextField(10);
         fontSizeField.setText(String.valueOf(SettingManager.getUiFontSize()));
         JPanel fontSizeRow = createFieldRow(
-                I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_SIZE),
+                fontSizeLabel,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_SIZE_TOOLTIP),
-                fontSizeField
+                fontSizeField,
+                fontFieldLabelWidth,
+                SettingsFieldRow.DEFAULT_FIELD_WIDTH
         );
         fontSection.add(fontSizeRow);
         fontSection.add(createVerticalSpace(FIELD_SPACING));
@@ -291,6 +332,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         // 跟踪所有组件的初始值
         trackComponentValue(showDownloadProgressCheckBox);
         trackComponentValue(downloadProgressDialogThresholdField);
+        trackComponentValue(gitDiffLargeFileThresholdField);
         trackComponentValue(maxHistoryCountField);
         trackComponentValue(maxOpenedRequestsCountField);
         trackComponentValue(autoFormatResponseCheckBox);
@@ -302,11 +344,11 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         trackComponentValue(sidebarTabsStateField);
     }
 
-    private JPanel createSidebarTabsRow() {
+    private JPanel createSidebarTabsRow(int labelWidth) {
         JPanel row = new JPanel();
         row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
         row.setOpaque(false);
-        row.setBackground(ModernColors.getBackgroundColor());
+        row.setBackground(getBackgroundColor());
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 270));
 
@@ -314,9 +356,9 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         label.setFont(com.laker.postman.util.FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
         label.setForeground(getTextPrimaryColor());
         label.setToolTipText(I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS_TOOLTIP));
-        label.setPreferredSize(new Dimension(220, 32));
-        label.setMinimumSize(new Dimension(220, 32));
-        label.setMaximumSize(new Dimension(220, Integer.MAX_VALUE));
+        label.setPreferredSize(new Dimension(labelWidth, 32));
+        label.setMinimumSize(new Dimension(labelWidth, 32));
+        label.setMaximumSize(new Dimension(labelWidth, 32));
         label.setAlignmentY(Component.TOP_ALIGNMENT);
 
         JPanel editor = createSidebarTabsEditor();
@@ -334,7 +376,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         JPanel editor = new JPanel();
         editor.setLayout(new BoxLayout(editor, BoxLayout.Y_AXIS));
         editor.setOpaque(false);
-        editor.setBackground(ModernColors.getBackgroundColor());
+        editor.setBackground(getBackgroundColor());
         editor.setAlignmentX(Component.LEFT_ALIGNMENT);
         editor.setMaximumSize(new Dimension(340, 260));
 
@@ -431,7 +473,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
     private void toggleSidebarTabVisibility(int index) {
         SidebarTabSettingItem item = sidebarTabListModel.get(index);
         if (item.visible && countVisibleSidebarTabs() == 1) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS_AT_LEAST_ONE));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS_AT_LEAST_ONE));
             return;
         }
         item.visible = !item.visible;
@@ -522,7 +564,6 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 if (baseFont == null) {
                     baseFont = fontPreviewLabel.getFont();
                 }
-                // ✅ 使用 deriveFont 确保 emoji 和所有 Unicode 字符正确显示
                 fontPreviewLabel.setFont(baseFont.deriveFont(Font.PLAIN, fontSize));
                 fontSupportHintLabel.setText(I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_STATUS_SYSTEM_DEFAULT));
                 fontSupportHintLabel.setForeground(getTextSecondaryColor());
@@ -648,6 +689,11 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_MAX_OPENED_REQUESTS_ERROR)
         );
         setupValidator(
+                gitDiffLargeFileThresholdField,
+                this::isValidGitDiffLargeFileThreshold,
+                I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_GIT_DIFF_LARGE_FILE_THRESHOLD_ERROR)
+        );
+        setupValidator(
                 fontSizeField,
                 this::isValidFontSize,
                 I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_FONT_SIZE_ERROR)
@@ -658,6 +704,16 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
         try {
             int size = Integer.parseInt(value.trim());
             return size >= 10 && size <= 24;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private boolean isValidGitDiffLargeFileThreshold(String value) {
+        try {
+            int thresholdMb = Integer.parseInt(value.trim());
+            return thresholdMb >= SettingManager.MIN_GIT_DIFF_LARGE_FILE_THRESHOLD_MB
+                    && thresholdMb <= SettingManager.MAX_GIT_DIFF_LARGE_FILE_THRESHOLD_MB;
         } catch (NumberFormatException e) {
             return false;
         }
@@ -675,33 +731,19 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 }
             }
         });
-
-        // 键盘快捷键
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        ActionMap actionMap = getActionMap();
-
-        inputMap.put(KeyStroke.getKeyStroke("control S"), "save");
-        actionMap.put("save", new AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                saveSettings(false);
-            }
-        });
-
+        registerSaveShortcut(() -> saveSettings(false));
     }
 
     private void saveSettings(boolean closeAfterSave) {
         // 验证所有字段
         if (!validateAllFields()) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_ERROR_MESSAGE));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_VALIDATION_ERROR_MESSAGE));
             return;
         }
         if (countVisibleSidebarTabs() == 0) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS_AT_LEAST_ONE));
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_GENERAL_SIDEBAR_TABS_AT_LEAST_ONE));
             return;
         }
-
-        boolean fontChanged = false; // 声明在 try 块外，以便在 catch 后也能访问
 
         try {
             String oldSidebarTabsState = getPersistedSidebarTabsStateSnapshot();
@@ -716,6 +758,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
             // 保存通用设置
             SettingManager.setMaxHistoryCount(Integer.parseInt(maxHistoryCountField.getText().trim()));
             SettingManager.setMaxOpenedRequestsCount(Integer.parseInt(maxOpenedRequestsCountField.getText().trim()));
+            SettingManager.setGitDiffLargeFileThresholdMb(Integer.parseInt(gitDiffLargeFileThresholdField.getText().trim()));
             SettingManager.setAutoFormatResponse(autoFormatResponseCheckBox.isSelected());
             SettingManager.setStartupSplashEnabled(startupSplashCheckBox.isSelected());
 
@@ -730,10 +773,10 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 updateSidebarConfiguration();
             }
 
-            // 保存通知位置设置并更新NotificationUtil - 使用枚举的 fromIndex 方法
+            // 保存通知位置设置并更新NotificationCenter - 使用枚举的 fromIndex 方法
             NotificationPosition selectedPosition = NotificationPosition.fromIndex(notificationPositionComboBox.getSelectedIndex());
             SettingManager.setNotificationPosition(selectedPosition);
-            NotificationUtil.setDefaultPosition(selectedPosition);
+            NotificationCenter.setDefaultPosition(selectedPosition);
 
             // 检测字体是否有变化（在保存前获取旧值）
             String oldFontName = SettingManager.getUiFontName();
@@ -749,7 +792,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
             } else {
                 newFontName = (String) fontNameComboBox.getSelectedItem();
                 if (!getFontSupport(newFontName).isUiSafe()) {
-                    NotificationUtil.showWarning(I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_UNSUPPORTED_WARNING));
+                    NotificationCenter.showWarning(I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_UNSUPPORTED_WARNING));
                 }
                 SettingManager.setUiFontName(newFontName);
             }
@@ -757,7 +800,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
             SettingManager.setUiFontSize(newFontSize);
 
             // 判断字体是否真的有变化（处理 null 情况）
-            fontChanged = !java.util.Objects.equals(newFontName, oldFontName) || newFontSize != oldFontSize;
+            boolean fontChanged = !Objects.equals(newFontName, oldFontName) || newFontSize != oldFontSize;
 
             // 如果字体有变化，立即应用字体设置到整个应用
             if (fontChanged) {
@@ -768,6 +811,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
             originalValues.clear();
             trackComponentValue(showDownloadProgressCheckBox);
             trackComponentValue(downloadProgressDialogThresholdField);
+            trackComponentValue(gitDiffLargeFileThresholdField);
             trackComponentValue(maxHistoryCountField);
             trackComponentValue(maxOpenedRequestsCountField);
             trackComponentValue(autoFormatResponseCheckBox);
@@ -781,9 +825,9 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
 
             // 根据是否修改了字体显示不同的提示信息
             if (fontChanged) {
-                NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_APPLIED));
+                NotificationCenter.showInfo(I18nUtil.getMessage(MessageKeys.SETTINGS_UI_FONT_APPLIED));
             } else {
-                NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_SUCCESS_MESSAGE));
+                NotificationCenter.showSuccess(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_SUCCESS_MESSAGE));
             }
 
             // 根据参数决定是否关闭对话框
@@ -794,7 +838,7 @@ public class UISettingsPanelModern extends ModernSettingsPanel {
                 }
             }
         } catch (Exception ex) {
-            NotificationUtil.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_ERROR_MESSAGE) + ": " + ex.getMessage());
+            NotificationCenter.showError(I18nUtil.getMessage(MessageKeys.SETTINGS_SAVE_ERROR_MESSAGE) + ": " + ex.getMessage());
         }
     }
 
