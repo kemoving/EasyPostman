@@ -48,6 +48,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import com.formdev.flatlaf.util.SystemFileChooser;
 import com.laker.postman.common.constants.ModernColors;
+import com.laker.postman.util.EditorFontManager;
 import com.laker.postman.util.EditorThemeUtil;
 import com.laker.postman.util.FileChooserUtil;
 import com.laker.postman.util.FontsUtil;
@@ -59,7 +60,8 @@ import com.laker.postman.util.MessageKeys;
  * 支持实时预览、工具栏、撤销/重做、导出等功能
  */
 public class MarkdownEditorPanel extends JPanel {
-    private RSyntaxTextArea editorArea;
+	private static final long serialVersionUID = 1L;
+	private RSyntaxTextArea editorArea;
     private SearchableTextArea searchableTextArea;
     private JTextPane previewPane;
     private JSplitPane splitPane;
@@ -392,14 +394,15 @@ public class MarkdownEditorPanel extends JPanel {
 
         // 创建 RSyntaxTextArea 用于 Markdown 编辑
         editorArea = new RSyntaxTextArea();
-        editorArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_MARKDOWN); // 设置为 Markdown 语法高亮
-        editorArea.setCodeFoldingEnabled(false); // Markdown 不需要代码折叠
-        editorArea.setTabSize(4); // 设置 Tab 宽度为 4 个空格
+        editorArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
+        editorArea.setCodeFoldingEnabled(false);
+        editorArea.setTabSize(4);
+        //editorArea.setTokenPainterFactory(ignored -> new ViewportClippedTokenPainter());
         // 加载编辑器主题 - 支持亮色和暗色主题自适应（必须在 setFont 之前，否则主题会覆盖字体）
         EditorThemeUtil.loadTheme(editorArea);
-        // 设置字体（在 loadTheme 之后，确保不被主题覆盖）
-        editorArea.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, 0));
-
+        // 设置编辑器字体（在 loadTheme 之后，确保不被主题覆盖）
+        EditorFontManager.applyConfiguredEditorFont(editorArea);
+        //editorArea.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, 0));
         // 使用 SearchableTextArea 包装器（启用搜索替换功能）
         searchableTextArea = new SearchableTextArea(editorArea, true);
 
