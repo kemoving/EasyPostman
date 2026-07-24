@@ -78,9 +78,7 @@ public class MarkdownEditorPanel extends JPanel {
 
     // 防抖相关
     private static final int PREVIEW_DEBOUNCE_DELAY = 300;  // 预览更新防抖延迟（毫秒）
-    private static final int STATUS_BAR_DEBOUNCE_DELAY = 100;  // 状态栏更新防抖延迟（毫秒）
     private Timer previewDebounceTimer;  // 预览防抖定时器
-    private Timer statusBarDebounceTimer;  // 状态栏防抖定时器
     private final AtomicBoolean isPreviewUpdating = new AtomicBoolean(false);  // 防止并发更新
 
     private static final int MODE_SPLIT = 0;
@@ -247,7 +245,9 @@ public class MarkdownEditorPanel extends JPanel {
      * 支持自动换行的 FlowLayout
      */
     private static class WrapLayout extends FlowLayout {
-        public WrapLayout(int align, int hgap, int vgap) {
+		private static final long serialVersionUID = 1L;
+
+		public WrapLayout(int align, int hgap, int vgap) {
             super(align, hgap, vgap);
         }
 
@@ -393,12 +393,11 @@ public class MarkdownEditorPanel extends JPanel {
         panel.setOpaque(false);
 
         // 创建 RSyntaxTextArea 用于 Markdown 编辑
-        editorArea = new RSyntaxTextArea();
-        editorArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_MARKDOWN);
-        editorArea.setCodeFoldingEnabled(false);
-        editorArea.setTabSize(4);
-        //editorArea.setTokenPainterFactory(ignored -> new ViewportClippedTokenPainter());
-        // 加载编辑器主题 - 支持亮色和暗色主题自适应（必须在 setFont 之前，否则主题会覆盖字体）
+        editorArea = new FallbackAwareRSyntaxTextArea();
+        editorArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_MARKDOWN); // 设置为 Markdown 语法高亮
+        editorArea.setCodeFoldingEnabled(false); // Markdown 不需要代码折叠
+        editorArea.setTabSize(4); // 设置 Tab 宽度为 4 个空格
+        // 统一加载主题、编辑器字体和缺字回退绘制
         EditorThemeUtil.loadTheme(editorArea);
         // 设置编辑器字体（在 loadTheme 之后，确保不被主题覆盖）
         EditorFontManager.applyConfiguredEditorFont(editorArea);
@@ -501,13 +500,9 @@ public class MarkdownEditorPanel extends JPanel {
         statusBar.add(new JSeparator(SwingConstants.VERTICAL));
         statusBar.add(positionLabel);
 
-        // 初始化状态栏防抖定时器
-        statusBarDebounceTimer = new Timer(STATUS_BAR_DEBOUNCE_DELAY, e -> updateStatusBar(positionLabel, wordCountLabel));
-        statusBarDebounceTimer.setRepeats(false);
-
-        // 使用防抖机制更新状态栏
+        // 更新状态栏
         editorArea.addCaretListener(e -> {
-            statusBarDebounceTimer.restart();
+           updateStatusBar(positionLabel, wordCountLabel);
         });
 
         return statusBar;
@@ -892,11 +887,6 @@ public class MarkdownEditorPanel extends JPanel {
      * 更新预览
      */
     private void updatePreview() {
-//        String markdown = editorArea.getText();
-//        String html = convertMarkdownToHtml(markdown);
-//        previewPane.setText(html);
-
-//        previewPane.setCaretPosition(0);
     	
         String markdown = editorArea.getText();
 
@@ -983,9 +973,6 @@ public class MarkdownEditorPanel extends JPanel {
         // 停止防抖定时器
         if (previewDebounceTimer != null) {
             previewDebounceTimer.stop();
-        }
-        if (statusBarDebounceTimer != null) {
-            statusBarDebounceTimer.stop();
         }
         
         // 清空监听器列表
